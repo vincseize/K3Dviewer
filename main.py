@@ -1,4 +1,4 @@
-# // test3D.py
+# // main.py
 import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QOpenGLWidget, QDesktopWidget
@@ -11,12 +11,12 @@ from OpenGL.GLU import *
 # ==========================================
 UNIT        = 1.0    # Taille de référence
 # --- GIZMO ---
-G_SCALE     = 0.2    # Taille globale du Gizmo (réduit de 50%)
+G_SCALE     = 0.2    # Taille globale du Gizmo
 G_TOP       = 0.85   # Position Y (0=bas, 1=haut)
 G_RIGHT     = 0.16   # Position X (marge droite)
 # --- LETTRES ---
-L_SIZE      = 0.02   # Taille des lettres X, Y, Z (réduit de 50%)
-L_WIDTH     = 1.5   # Épaisseur du trait des lettres
+L_SIZE      = 0.02   # Taille des lettres X, Y, Z
+L_WIDTH     = 1.5    # Épaisseur du trait des lettres
 # ==========================================
 
 class Quaternion:
@@ -56,6 +56,8 @@ class Viewer3D(QOpenGLWidget):
         self.cur_quat = Quaternion()
         self.last_pos = QPoint()
         self.zoom = -12.0
+        # Désactive le menu contextuel par défaut pour libérer le clic droit
+        self.setContextMenuPolicy(Qt.NoContextMenu)
 
     def initializeGL(self):
         glEnable(GL_DEPTH_TEST)
@@ -65,10 +67,13 @@ class Viewer3D(QOpenGLWidget):
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
+        
+        # Vue caméra
         glTranslatef(0.0, 0.0, self.zoom)
         glRotatef(25, 1, 0, 0)
         glRotatef(-45, 0, 1, 0)
         
+        # Rotation interactive
         rot_matrix = self.cur_quat.to_matrix().T
         glMultMatrixf(rot_matrix)
         
@@ -108,8 +113,11 @@ class Viewer3D(QOpenGLWidget):
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
+        
+        # Positionnement dans l'écran
         glTranslatef(aspect - G_RIGHT, G_TOP, 0)
         
+        # Même orientation que la scène
         glRotatef(25, 1, 0, 0)
         glRotatef(-45, 0, 1, 0)
         glMultMatrixf(rot_matrix)
@@ -119,9 +127,9 @@ class Viewer3D(QOpenGLWidget):
         glLineWidth(2.0)
         
         glBegin(GL_LINES)
-        glColor3f(1.0, 0.2, 0.2); glVertex3f(0,0,0); glVertex3f(length,0,0)
-        glColor3f(0.2, 1.0, 0.2); glVertex3f(0,0,0); glVertex3f(0,length,0)
-        glColor3f(0.2, 0.6, 1.0); glVertex3f(0,0,0); glVertex3f(0,0,length)
+        glColor3f(1.0, 0.2, 0.2); glVertex3f(0,0,0); glVertex3f(length,0,0) # X
+        glColor3f(0.2, 1.0, 0.2); glVertex3f(0,0,0); glVertex3f(0,length,0) # Y
+        glColor3f(0.2, 0.6, 1.0); glVertex3f(0,0,0); glVertex3f(0,0,length) # Z
         glEnd()
 
         offset = length + (L_SIZE * 1.5)
@@ -171,14 +179,18 @@ class Viewer3D(QOpenGLWidget):
         self.update()
 
     def mousePressEvent(self, event):
+        # On stocke la position quel que soit le bouton pour les deltas
         self.last_pos = event.pos()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
+        # Rotation activée uniquement par la molette (bouton du milieu)
+        if event.buttons() & Qt.MidButton:
             diff = event.pos() - self.last_pos
             self.last_pos = event.pos()
+            
             axis = np.array([diff.y(), diff.x(), 0.0], dtype=float)
             angle = np.linalg.norm(axis) * 0.005
+            
             if angle > 0:
                 delta_quat = Quaternion.from_axis_angle(axis, angle)
                 self.cur_quat = delta_quat * self.cur_quat
@@ -193,12 +205,16 @@ class Viewer3D(QOpenGLWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Géométrie centrée sur l'écran à 80% de taille
     screen = QDesktopWidget().availableGeometry()
     w, h = int(screen.width() * 0.8), int(screen.height() * 0.8)
+    
     win = QMainWindow()
     win.setCentralWidget(Viewer3D())
-    win.setWindowTitle("Viewer 3D - Compact Gizmo")
+    win.setWindowTitle("K3Dviewer - Middle Mouse to Orbit")
     win.resize(w, h)
     win.move(int((screen.width() - w) / 2), int((screen.height() - h) / 2))
     win.show()
+    
     sys.exit(app.exec_())
