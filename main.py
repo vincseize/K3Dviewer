@@ -1,7 +1,9 @@
 # // main.py
 import sys
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QMainWindow, QOpenGLWidget, QDesktopWidget
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QOpenGLWidget, 
+                             QDesktopWidget, QAction, QMenu, QMessageBox, 
+                             QWidget, QMenuBar, QSizePolicy)
 from PyQt5.QtCore import Qt, QPoint
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -10,17 +12,14 @@ from OpenGL.GLU import *
 # CONFIGURATION GLOBALE
 # ==========================================
 UNIT        = 1.0    
-# --- GIZMO ---
 G_SCALE     = 0.2    
 G_TOP       = 0.85   
 G_RIGHT     = 0.16   
-# --- LETTRES ---
 L_SIZE      = 0.02   
 L_WIDTH     = 1.5    
-# --- COULEURS (Format RGB) ---
-C_RED       = (1.0, 0.22, 0.26) # Rouge Blender
-C_GREEN     = (0.55, 0.85, 0.1) # Vert Blender
-C_BLUE      = (0.18, 0.52, 1.0) # Bleu Blender
+C_RED       = (1.0, 0.22, 0.26) 
+C_GREEN     = (0.55, 0.85, 0.1) 
+C_BLUE      = (0.18, 0.52, 1.0) 
 # ==========================================
 
 class Quaternion:
@@ -60,7 +59,21 @@ class Viewer3D(QOpenGLWidget):
         self.cur_quat = Quaternion()
         self.last_pos = QPoint()
         self.zoom = -12.0
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, pos):
+        menu = QMenu(self)
+        action1 = menu.addAction("Menu 1 - Reset Vue")
+        action2 = menu.addAction("Menu 2 - Info Cube")
+        action3 = menu.addAction("Menu 3 - Export")
+        action = menu.exec_(self.mapToGlobal(pos))
+        if action == action1:
+            self.cur_quat = Quaternion()
+            self.zoom = -12.0
+            self.update()
+        elif action == action2:
+            print("Cube de taille UNIT centrée en 0,0,0")
 
     def initializeGL(self):
         glEnable(GL_DEPTH_TEST)
@@ -70,14 +83,11 @@ class Viewer3D(QOpenGLWidget):
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        
         glTranslatef(0.0, 0.0, self.zoom)
         glRotatef(25, 1, 0, 0)
         glRotatef(-45, 0, 1, 0)
-        
         rot_matrix = self.cur_quat.to_matrix().T
         glMultMatrixf(rot_matrix)
-        
         self.draw_grid()
         self.draw_world_axes()
         self.draw_cube_centered() 
@@ -110,31 +120,25 @@ class Viewer3D(QOpenGLWidget):
         glLoadIdentity()
         aspect = width / height
         glOrtho(-aspect, aspect, -1, 1, -10, 10)
-        
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
         glTranslatef(aspect - G_RIGHT, G_TOP, 0)
-        
         glRotatef(25, 1, 0, 0)
         glRotatef(-45, 0, 1, 0)
         glMultMatrixf(rot_matrix)
-        
         length = 0.3 * G_SCALE
         glDisable(GL_DEPTH_TEST)
         glLineWidth(2.0)
-        
         glBegin(GL_LINES)
-        glColor3f(*C_RED);   glVertex3f(0,0,0); glVertex3f(length,0,0) # X
-        glColor3f(*C_GREEN); glVertex3f(0,0,0); glVertex3f(0,length,0) # Y
-        glColor3f(*C_BLUE);  glVertex3f(0,0,0); glVertex3f(0,0,length) # Z
+        glColor3f(*C_RED);   glVertex3f(0,0,0); glVertex3f(length,0,0)
+        glColor3f(*C_GREEN); glVertex3f(0,0,0); glVertex3f(0,length,0)
+        glColor3f(*C_BLUE);  glVertex3f(0,0,0); glVertex3f(0,0,length)
         glEnd()
-
         offset = length + (L_SIZE * 1.5)
         self.draw_letter('X', [offset, 0, 0], C_RED)
         self.draw_letter('Y', [0, offset, 0], C_GREEN)
         self.draw_letter('Z', [0, 0, offset], C_BLUE)
-        
         glEnable(GL_DEPTH_TEST)
         glPopMatrix()
         glMatrixMode(GL_PROJECTION)
@@ -154,13 +158,10 @@ class Viewer3D(QOpenGLWidget):
         glEnd()
 
     def draw_world_axes(self):
-        """Axes au sol (Style Blender : Rouge=X, Bleu=Z au sol, pas d'axe vertical par défaut)"""
         glLineWidth(2)
         glBegin(GL_LINES)
-        # Axe X - Rouge
         glColor3f(*C_RED)
         glVertex3f(-10 * UNIT, 0, 0); glVertex3f(10 * UNIT, 0, 0)
-        # Axe Z - Bleu (Horizontal au sol dans notre setup actuel)
         glColor3f(*C_BLUE)
         glVertex3f(0, 0, -10 * UNIT); glVertex3f(0, 0, 10 * UNIT)
         glEnd()
@@ -171,7 +172,7 @@ class Viewer3D(QOpenGLWidget):
         v = [[-s,-s,-s], [s,-s,-s], [s,s,-s], [-s,s,-s], [-s,-s,s], [s,-s,s], [s,s,s], [-s,s,s]]
         e = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
         glBegin(GL_LINES)
-        glColor3f(0.8, 0.8, 0.8) # Cube gris clair pour mieux voir les axes
+        glColor3f(0.8, 0.8, 0.8)
         for edge in e:
             for vertex in edge: glVertex3fv(v[vertex])
         glEnd()
@@ -201,13 +202,53 @@ class Viewer3D(QOpenGLWidget):
         gluPerspective(45, w / max(1, h), 0.1, 100.0)
         glMatrixMode(GL_MODELVIEW)
 
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.viewer = Viewer3D()
+        self.setCentralWidget(self.viewer)
+        self.init_ui()
+
+    def init_ui(self):
+        menubar = self.menuBar()
+        
+        # --- PARTIE GAUCHE ---
+        file_menu = menubar.addMenu('File')
+        file_menu.addAction('Open')
+        file_menu.addAction('Save')
+        file_menu.addSeparator()
+        exit_act = file_menu.addAction('Exit')
+        exit_act.triggered.connect(self.close)
+
+        menubar.addMenu('Menu')
+        menubar.addMenu('Windows')
+
+        # --- LE SPLIT (Espaceur invisible) ---
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        menubar.setCornerWidget(spacer, Qt.TopLeftCorner)
+
+        # --- PARTIE DROITE ---
+        right_menu_bar = QMenuBar()
+        help_menu = right_menu_bar.addMenu('?')
+        info_act = help_menu.addAction('Info')
+        info_act.triggered.connect(self.show_help)
+        
+        menubar.setCornerWidget(right_menu_bar, Qt.TopRightCorner)
+
+    def show_help(self):
+        QMessageBox.information(self, "K3Dviewer Info", 
+            "Commandes :\n"
+            "- Orbite : Clic molette (Middle click)\n"
+            "- Zoom : Molette\n"
+            "- Menu : Clic droit")
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     screen = QDesktopWidget().availableGeometry()
     w, h = int(screen.width() * 0.8), int(screen.height() * 0.8)
-    win = QMainWindow()
-    win.setCentralWidget(Viewer3D())
-    win.setWindowTitle("K3Dviewer - Blender Style")
+    win = MainWindow()
+    win.setWindowTitle("K3Dviewer")
     win.resize(w, h)
     win.move(int((screen.width() - w) / 2), int((screen.height() - h) / 2))
     win.show()
