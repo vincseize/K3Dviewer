@@ -9,7 +9,7 @@ class Gizmo:
     @staticmethod
     def draw_letter_mask(char, s):
         """Dessine la silhouette de la lettre."""
-        glLineWidth(L_WIDTH * 1.8) # Un poil plus fin car la lettre est plus petite
+        glLineWidth(L_WIDTH * 1.8)
         glBegin(GL_LINES)
         if char == 'X':
             glVertex3f(-s, -s, 0); glVertex3f(s, s, 0)
@@ -45,14 +45,18 @@ class Gizmo:
         glEnd()
 
     @staticmethod
-    def draw_interactive_dot(pos, color, char=None):
-        """ Pastille un peu plus petite. """
-        # Réduction de 1.5 à 1.3
+    def draw_interactive_dot(pos, color, rot_inv, char=None):
+        """ Dessine une pastille qui fait face à la caméra (Billboarding). """
         radius = L_SIZE * 1.3 
         s_letter = radius * 0.5 
         
         glPushMatrix()
+        # On se déplace à la position 3D de l'axe
         glTranslatef(pos[0], pos[1], pos[2])
+        
+        # --- BILLBOARDING ---
+        # On annule la rotation de la scène pour que le cercle soit face écran
+        glMultMatrixf(rot_inv)
         
         if char:
             glEnable(GL_STENCIL_TEST)
@@ -61,23 +65,31 @@ class Gizmo:
             glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE)
             glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
             glDisable(GL_DEPTH_TEST)
+            
             Gizmo.draw_letter_mask(char, s_letter)
+            
             glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
             glStencilFunc(GL_NOTEQUAL, 1, 0xFF) 
             glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP) 
+            
             Gizmo.draw_filled_circle(radius, color, alpha=1.0)
             Gizmo.draw_circle_outline(radius, color, alpha=1.0)
             glDisable(GL_STENCIL_TEST)
         else:
             Gizmo.draw_filled_circle(radius, color, alpha=0.3)
             Gizmo.draw_circle_outline(radius, color, alpha=1.0)
+            
         glPopMatrix()
 
     @staticmethod
     def render(width, height, model_view_matrix):
-        """Affiche le Gizmo plus compact et décalé vers la gauche."""
+        """Affiche le Gizmo avec billboarding complet."""
+        # Matrice de rotation
         rot_only = np.copy(model_view_matrix)
         rot_only[3][0:3] = 0 
+        
+        # Inverse de la rotation (Transposée) pour le Billboarding
+        rot_inv = np.copy(rot_only.T)
         
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
@@ -89,26 +101,23 @@ class Gizmo:
         glPushMatrix()
         glLoadIdentity()
         
-        # --- POSITIONNEMENT ---
-        # y_pos : reste à -0.08 (3px plus bas que précédemment)
-        # x_pos : On augmente la soustraction de G_RIGHT pour pousser vers la gauche
-        # On passe de (G_RIGHT - 0.03) à (G_RIGHT + 0.02) pour gagner environ 5 pixels vers la gauche
+        # Positionnement
         y_pos = G_TOP - 0.04
         x_pos = aspect - (G_RIGHT + 0.02) 
         glTranslatef(x_pos, y_pos, 0)
         
+        # On applique la rotation pour les traits des axes
+        glPushMatrix()
         glMultMatrixf(rot_only)
         
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glDisable(GL_DEPTH_TEST) 
         
-        # ... (le reste du code des axes et pastilles demeure inchangé)
-        
         axis_len = 0.06
         dot_off = axis_len + 0.08 
         
-        # Axes
+        # --- 1. AXES (TRAITS) ---
         glLineWidth(2.5)
         glBegin(GL_LINES)
         glColor3f(*C_RED);   glVertex3f(0, 0, 0); glVertex3f(axis_len, 0, 0)
@@ -119,16 +128,19 @@ class Gizmo:
         glStencilMask(0xFF)
         glClear(GL_STENCIL_BUFFER_BIT)
 
-        # Pastilles Positives
-        Gizmo.draw_interactive_dot([dot_off, 0, 0], C_RED, char='X')
-        Gizmo.draw_interactive_dot([0, dot_off, 0], C_BLUE, char='Z')
-        Gizmo.draw_interactive_dot([0, 0, dot_off], C_GREEN) 
+        # --- 2. PASTILLES (Avec rot_inv passé pour le Billboarding) ---
+        # Positives
+        Gizmo.draw_interactive_dot([dot_off, 0, 0], C_RED, rot_inv, char='X')
+        Gizmo.draw_interactive_dot([0, dot_off, 0], C_BLUE, rot_inv, char='Z')
+        Gizmo.draw_interactive_dot([0, 0, dot_off], C_GREEN, rot_inv) 
 
-        # Pastilles Négatives
-        Gizmo.draw_interactive_dot([-dot_off, 0, 0], C_RED)
-        Gizmo.draw_interactive_dot([0, -dot_off, 0], C_BLUE)
-        Gizmo.draw_interactive_dot([0, 0, -dot_off], C_GREEN, char='Y')
+        # Négatives
+        Gizmo.draw_interactive_dot([-dot_off, 0, 0], C_RED, rot_inv)
+        Gizmo.draw_interactive_dot([0, -dot_off, 0], C_BLUE, rot_inv)
+        Gizmo.draw_interactive_dot([0, 0, -dot_off], C_GREEN, rot_inv, char='Y')
 
+        glPopMatrix() # Fin rotation traits
+        
         glEnable(GL_DEPTH_TEST)
         glPopMatrix()
         glMatrixMode(GL_PROJECTION)
