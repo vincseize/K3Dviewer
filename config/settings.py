@@ -1,6 +1,12 @@
 # settings.py
 
 # Unités et dimensions
+import datetime
+
+
+APP_NAME  = "K3D viewer"
+COPYRIGHT = "© 2025 " + str(datetime.now().year) + " - LRDS - All rights reserved."
+DEVELOPERS = "LRDS - Vincseize - Karlova - C. POTTIER"
 UNIT      = 1.0
 G_SCALE   = 0.2
 G_TOP     = 0.85
