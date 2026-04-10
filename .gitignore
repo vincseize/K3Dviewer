@@ -1,0 +1,38 @@
+# === PyInstaller (Compilation) ===
+# Dossiers de sortie
+/build/
+/dist/
+
+# Fichiers de configuration de build
+*.spec
+
+# Exécutables
+*.exe
+*.bin
+*.app
+
+# === Python ===
+# Byte-code
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+venv/
+.venv/
+env/
+
+# === IDE & OS ===
+# Visual Studio Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# === Projet spécifique ===
+# Si tu souhaites ignorer tes exports de structure
+project_tree.txt
