@@ -1,7 +1,8 @@
-# settings.py
+# /config/settings.py
 
 # Unités et dimensions
 import datetime
+from datetime import datetime
 
 
 APP_NAME  = "K3D viewer"
