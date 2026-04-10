@@ -1,12 +1,13 @@
 # viewers/main_viewer.py
 
 import numpy as np
-from PyQt5.QtWidgets import QOpenGLWidget, QMenu
+from PyQt5.QtWidgets import QOpenGLWidget
 from PyQt5.QtCore import Qt, QPoint
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from config.settings import *
 from .gizmo import Gizmo
+from menus.context_menu import MainContextMenu  # Import du nouveau menu
 
 class Viewer3D(QOpenGLWidget):
     def __init__(self):
@@ -15,6 +16,9 @@ class Viewer3D(QOpenGLWidget):
         self.angle_z = -45.0 
         self.zoom = -12.0
         self.last_pos = QPoint()
+        
+        # Initialisation du menu contextuel
+        self.context_menu = MainContextMenu(self)
 
     def initializeGL(self):
         glEnable(GL_DEPTH_TEST)
@@ -27,15 +31,21 @@ class Viewer3D(QOpenGLWidget):
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
+        
+        # Application de la vue
         glTranslatef(0.0, 0.0, self.zoom)
         glRotatef(self.angle_x, 1, 0, 0)
         glRotatef(self.angle_z, 0, 1, 0)
         
+        # Récupération de la matrice pour le Gizmo
         model_view = glGetFloatv(GL_MODELVIEW_MATRIX)
 
+        # Rendu de la scène
         self.draw_grid()
         self.draw_world_axes()
         self.draw_cube_centered() 
+        
+        # Rendu du Gizmo (en dernier pour l'overlay)
         Gizmo.render(self.width(), self.height(), model_view)
 
     def draw_grid(self):
@@ -68,6 +78,12 @@ class Viewer3D(QOpenGLWidget):
             for vertex in edge: glVertex3fv(v[vertex])
         glEnd()
 
+    # --- ÉVÉNEMENTS SOURIS ---
+
+    def contextMenuEvent(self, event):
+        """Déclenché sur clic droit : affiche le menu de /menus/context_menu.py"""
+        self.context_menu.exec_(event.globalPos())
+
     def wheelEvent(self, event):
         self.zoom += event.angleDelta().y() * 0.005
         self.update()
@@ -76,6 +92,7 @@ class Viewer3D(QOpenGLWidget):
         self.last_pos = event.pos()
 
     def mouseMoveEvent(self, event):
+        # Rotation avec le bouton du milieu (style Blender/CAD)
         if event.buttons() & Qt.MidButton:
             diff = event.pos() - self.last_pos
             self.last_pos = event.pos()
