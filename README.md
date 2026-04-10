@@ -13,3 +13,9 @@ K3Dviewer/
 ├── 🐍 main.py             # Code source principal
 ├── 📄 project_tree.txt    # Export de l'arborescence
 └── 🐍 tree.py             # Script utilitaire d'arborescence
+
+---
+
+## 📁 Compilation
+python -v  --> 3.7
+pyinstaller --noconfirm --onefile --windowed --name "K3Dviewer" main.py
