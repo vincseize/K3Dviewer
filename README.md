@@ -16,6 +16,11 @@ K3Dviewer/
 
 ---
 
+libs
+QT5, openGl etc...
+pip install pyrr
+
+
 ## 📁 Compilation
 python -v  --> 3.7
 pyinstaller --noconfirm --onefile --windowed --name "K3Dviewer" main.py
