@@ -25,6 +25,7 @@ class Viewer3D(QOpenGLWidget):
         self.last_pos = QPoint()
         self.is_ortho = False
         self.show_grid = True
+        self.show_axes = True  # AJOUTÉ : contrôle des axes
         self.context_menu = MainContextMenu(self)
 
     # --- MÉTHODES DE CONTRÔLE (Interfacées avec main.py) ---
@@ -39,6 +40,11 @@ class Viewer3D(QOpenGLWidget):
     def set_grid_visible(self, visible):
         """Affiche/Masque la grille au sol."""
         self.show_grid = visible
+        self.update()
+
+    def set_axes_visible(self, visible):
+        """Affiche/Masque les axes."""
+        self.show_axes = visible
         self.update()
 
     def reset_view(self):
@@ -86,7 +92,8 @@ class Viewer3D(QOpenGLWidget):
         self.draw_cube_centered()
         glDepthMask(GL_TRUE)
         
-        self.draw_world_axes()
+        if self.show_axes:  # MODIFIÉ : condition pour les axes
+            self.draw_world_axes()
         
         # Gizmo 2D
         glDisable(GL_DEPTH_TEST)
