@@ -5,12 +5,14 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QCursor, QPixmap, QPainter, QPen, QColor
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *  # IMPORTANT: Ajouter cet import
 from config.settings import *
 from .gizmo import Gizmo
+from .menu_bar import MenuBar
 from menus.context_menu import MainContextMenu
 
 # Constante pour le décalage vertical des boutons (utilisée dans main.py)
-TOP_BT_NAV = 45 
+TOP_BT_NAV = 50
 
 class Viewer3D(QOpenGLWidget):
     def __init__(self, parent=None):
@@ -115,7 +117,6 @@ class Viewer3D(QOpenGLWidget):
             self.deactivate_pan_mode()
         self.zoom_mode = True
         self.setCursor(self.zoom_cursor)
-        print("Mode Zoom ACTIVÉ")
     
     def deactivate_zoom_mode(self):
         """Désactive le mode zoom."""
@@ -123,7 +124,6 @@ class Viewer3D(QOpenGLWidget):
             self.zoom_mode = False
             self.is_zooming = False
             self.unsetCursor()
-            print("Mode Zoom DÉSACTIVÉ")
 
     def activate_pan_mode(self):
         """Active le mode pan."""
@@ -131,7 +131,6 @@ class Viewer3D(QOpenGLWidget):
             self.deactivate_zoom_mode()
         self.pan_mode = True
         self.setCursor(self.pan_cursor)
-        print("Mode Pan ACTIVÉ")
     
     def deactivate_pan_mode(self):
         """Désactive le mode pan."""
@@ -139,7 +138,6 @@ class Viewer3D(QOpenGLWidget):
             self.pan_mode = False
             self.is_panning = False
             self.unsetCursor()
-            print("Mode Pan DÉSACTIVÉ")
 
     # --- MÉTHODES DE CONTRÔLE ---
 
@@ -208,9 +206,15 @@ class Viewer3D(QOpenGLWidget):
         if self.show_axes:
             self.draw_world_axes()
         
-        # Gizmo 2D
+        # Gizmo 2D et Barre de menu
         glDisable(GL_DEPTH_TEST)
         Gizmo.render(self.width(), self.height(), mv_matrix)
+        MenuBar.render(self.width(), self.height())
+
+        # Passer la position de la souris pour les effets de survol
+        cursor_pos = self.mapFromGlobal(QCursor.pos())
+        MenuBar.render(self.width(), self.height(), cursor_pos.x(), self.height() - cursor_pos.y())
+
         glEnable(GL_DEPTH_TEST)
 
     def draw_grid(self):
@@ -274,6 +278,10 @@ class Viewer3D(QOpenGLWidget):
     # --- INPUTS ---
 
     def wheelEvent(self, event):
+        # Fermer les menus ouverts
+        from .menu_bar import MenuBar
+        MenuBar.active_menu = None
+
         # Molette : zoom normal ET désactive tous les modes
         if self.zoom_mode:
             self.deactivate_zoom_mode()
@@ -334,6 +342,19 @@ class Viewer3D(QOpenGLWidget):
                 self.deactivate_pan_mode()
                 if hasattr(self.parent(), 'btn_pan'):
                     self.parent().btn_pan.setChecked(False)
+            event.accept()
+            return
+        
+        # Fermer les menus ouverts (sauf si clic sur la barre)
+        from .menu_bar import MenuBar
+    
+        # Si clic droit ou milieu, fermer les menus
+        if event.button() in (Qt.RightButton, Qt.MidButton):
+            MenuBar.active_menu = None
+        
+        # Vérifier les clics sur la barre de menu (si pas déjà géré par MenuBar)
+        if MenuBar.handle_click(event.x(), self.height(), self.height()):
+            self.update()
             event.accept()
             return
         
@@ -398,6 +419,9 @@ class Viewer3D(QOpenGLWidget):
         self.update_projection()
 
     def initializeGL(self):
+        # Initialiser GLUT (nécessaire pour le texte)
+        glutInit(sys.argv)
+        
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
         glEnable(GL_BLEND)
