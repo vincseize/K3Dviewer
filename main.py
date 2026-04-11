@@ -59,38 +59,61 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(8)
 
-        # Groupe exclusif pour Persp/Ortho
-        self.proj_group = QButtonGroup(self)
-        self.btn_persp = NavButton("persp", "Perspective")
-        self.btn_ortho = NavButton("ortho", "Orthographique")
-        self.proj_group.addButton(self.btn_persp)
-        self.proj_group.addButton(self.btn_ortho)
-
+        # Bouton unique Perspective/Ortho (Toggle)
+        self.btn_proj = NavButton("persp", "Mode Perspective (cliquer pour Orthographique)")
+        self.btn_proj.setCheckable(True)
+        self.btn_proj.setChecked(False)  # Perspective par défaut
+        
         # Autres boutons
         self.btn_home = NavButton("home", "Reset Camera", False)
         self.btn_grid = NavButton("grid", "Toggle Grid")
         
         # On ajoute au layout
-        layout.addWidget(self.btn_persp)
-        layout.addWidget(self.btn_ortho)
+        layout.addWidget(self.btn_proj)
         layout.addWidget(self.btn_home)
         layout.addWidget(self.btn_grid)
 
         # Setup initial
-        self.btn_persp.setChecked(True)
         self.btn_grid.setChecked(True)
 
         # Connexions
-        self.btn_persp.clicked.connect(lambda: self.viewer.set_projection(False))
-        self.btn_ortho.clicked.connect(lambda: self.viewer.set_projection(True))
+        self.btn_proj.toggled.connect(self.toggle_projection)
         self.btn_home.clicked.connect(self.viewer.reset_view)
         self.btn_grid.toggled.connect(self.viewer.set_grid_visible)
+        
+        # Mise à jour initiale de l'icône
+        self.update_proj_icon()
+
+    def toggle_projection(self, checked):
+        """Bascule entre Perspective (False) et Orthographique (True)."""
+        # checked = True -> Ortho, False -> Perspective
+        self.viewer.set_projection(checked)
+        self.update_proj_icon()
+    
+    def update_proj_icon(self):
+        """Met à jour l'icône du bouton selon le mode actuel."""
+        if self.viewer.is_ortho:
+            # Mode Orthographique actif
+            renderer = QSvgRenderer(SVG_ICONS["ortho"].encode())
+            self.btn_proj.setToolTip("Mode Orthographique (cliquer pour Perspective)")
+        else:
+            # Mode Perspective actif
+            renderer = QSvgRenderer(SVG_ICONS["persp"].encode())
+            self.btn_proj.setToolTip("Mode Perspective (cliquer pour Orthographique)")
+        
+        # Mise à jour de l'icône
+        pix = QPixmap(30, 30)
+        pix.fill(Qt.transparent)
+        painter = QPainter(pix)
+        renderer.render(painter)
+        painter.end()
+        self.btn_proj.setIcon(QIcon(pix))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Positionnement dynamique sous le Gizmo (Top-Right)
         # Utilisation de TOP_BT_NAV pour le décalage vertical
-        self.nav_frame.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 180)
+        self.nav_frame.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 120)  # Hauteur réduite (3 boutons au lieu de 4)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
