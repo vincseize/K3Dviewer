@@ -33,10 +33,19 @@ class Viewer3D(QOpenGLWidget):
         self.zoom_mode = False
         self.zoom_start_y = 0
         self.zoom_start_value = 0.0
-        self.is_dragging = False
+        self.is_zooming = False
         
-        # Créer un curseur personnalisé pour le mode zoom
+        # État pour le pan (mode toggle)
+        self.pan_mode = False
+        self.pan_start_x = 0
+        self.pan_start_y = 0
+        self.pan_start_pan_x = 0.0
+        self.pan_start_pan_y = 0.0
+        self.is_panning = False
+        
+        # Créer des curseurs personnalisés
         self.zoom_cursor = self.create_zoom_cursor()
+        self.pan_cursor = self.create_pan_cursor()
 
     def create_zoom_cursor(self):
         """Crée un curseur personnalisé pour le mode zoom."""
@@ -64,19 +73,73 @@ class Viewer3D(QOpenGLWidget):
         
         return QCursor(pixmap, 16, 16)
 
+    def create_pan_cursor(self):
+        """Crée un curseur personnalisé pour le mode pan."""
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Dessiner un cercle
+        painter.setPen(QPen(QColor(200, 200, 200), 2))
+        painter.setBrush(QColor(60, 60, 60, 200))
+        painter.drawEllipse(2, 2, 28, 28)
+        
+        # Dessiner les flèches 4 directions
+        painter.setPen(QPen(QColor(255, 255, 255), 2))
+        # Flèche haut
+        painter.drawLine(16, 8, 16, 18)
+        painter.drawLine(12, 12, 16, 8)
+        painter.drawLine(20, 12, 16, 8)
+        # Flèche bas
+        painter.drawLine(16, 24, 16, 14)
+        painter.drawLine(12, 20, 16, 24)
+        painter.drawLine(20, 20, 16, 24)
+        # Flèche gauche
+        painter.drawLine(8, 16, 18, 16)
+        painter.drawLine(12, 12, 8, 16)
+        painter.drawLine(12, 20, 8, 16)
+        # Flèche droite
+        painter.drawLine(24, 16, 14, 16)
+        painter.drawLine(20, 12, 24, 16)
+        painter.drawLine(20, 20, 24, 16)
+        
+        painter.end()
+        
+        return QCursor(pixmap, 16, 16)
+
     def activate_zoom_mode(self):
         """Active le mode zoom."""
+        if self.pan_mode:
+            self.deactivate_pan_mode()
         self.zoom_mode = True
         self.setCursor(self.zoom_cursor)
-        print("Mode Zoom ACTIVÉ - Cliquez et glissez verticalement pour zoomer")
+        print("Mode Zoom ACTIVÉ")
     
     def deactivate_zoom_mode(self):
         """Désactive le mode zoom."""
         if self.zoom_mode:
             self.zoom_mode = False
-            self.is_dragging = False
+            self.is_zooming = False
             self.unsetCursor()
             print("Mode Zoom DÉSACTIVÉ")
+
+    def activate_pan_mode(self):
+        """Active le mode pan."""
+        if self.zoom_mode:
+            self.deactivate_zoom_mode()
+        self.pan_mode = True
+        self.setCursor(self.pan_cursor)
+        print("Mode Pan ACTIVÉ")
+    
+    def deactivate_pan_mode(self):
+        """Désactive le mode pan."""
+        if self.pan_mode:
+            self.pan_mode = False
+            self.is_panning = False
+            self.unsetCursor()
+            print("Mode Pan DÉSACTIVÉ")
 
     # --- MÉTHODES DE CONTRÔLE ---
 
@@ -159,8 +222,10 @@ class Viewer3D(QOpenGLWidget):
         for i in range(-sub_div, sub_div + 1):
             if i % 5 == 0: continue
             v = i * (size / sub_div)
-            glVertex3f(-size, 0, v); glVertex3f(size, 0, v)
-            glVertex3f(v, 0, -size); glVertex3f(v, 0, size)
+            glVertex3f(-size, 0, v)
+            glVertex3f(size, 0, v)
+            glVertex3f(v, 0, -size)
+            glVertex3f(v, 0, size)
         glEnd()
         glLineWidth(1.5)
         glColor4f(0.28, 0.28, 0.28, 0.4)
@@ -168,38 +233,56 @@ class Viewer3D(QOpenGLWidget):
         for i in range(-main_div, main_div + 1):
             if i == 0: continue
             v = i * (size / main_div)
-            glVertex3f(-size, 0, v); glVertex3f(size, 0, v)
-            glVertex3f(v, 0, -size); glVertex3f(v, 0, size)
+            glVertex3f(-size, 0, v)
+            glVertex3f(size, 0, v)
+            glVertex3f(v, 0, -size)
+            glVertex3f(v, 0, size)
         glEnd()
 
     def draw_world_axes(self):
         glLineWidth(2.5)
         glDepthRange(0.0, 0.999)
         glBegin(GL_LINES)
-        glColor3f(*C_RED); glVertex3f(-10, 0, 0); glVertex3f(10, 0, 0)
-        glColor3f(*C_BLUE); glVertex3f(0, 0, -10); glVertex3f(0, 0, 10)
+        glColor3f(*C_RED)
+        glVertex3f(-10, 0, 0)
+        glVertex3f(10, 0, 0)
+        glColor3f(*C_BLUE)
+        glVertex3f(0, 0, -10)
+        glVertex3f(0, 0, 10)
         glEnd()
         glDepthRange(0.0, 1.0)
 
     def draw_cube_centered(self):
         glLineWidth(2.0)
         s = UNIT
-        v = [[-s,-s,-s], [s,-s,-s], [s,s,-s], [-s,s,-s], [-s,-s,s], [s,-s,s], [s,s,s], [-s,s,s]]
-        e = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
+        v = [
+            [-s, -s, -s], [s, -s, -s], [s, s, -s], [-s, s, -s],
+            [-s, -s, s], [s, -s, s], [s, s, s], [-s, s, s]
+        ]
+        e = [
+            (0,1), (1,2), (2,3), (3,0),
+            (4,5), (5,6), (6,7), (7,4),
+            (0,4), (1,5), (2,6), (3,7)
+        ]
         glBegin(GL_LINES)
         glColor3f(0.8, 0.8, 0.8)
         for edge in e:
-            for vertex in edge: glVertex3fv(v[vertex])
+            for vertex in edge:
+                glVertex3fv(v[vertex])
         glEnd()
 
     # --- INPUTS ---
 
     def wheelEvent(self, event):
-        # Molette : zoom normal ET désactive le mode zoom
+        # Molette : zoom normal ET désactive tous les modes
         if self.zoom_mode:
             self.deactivate_zoom_mode()
-            # Désactiver visuellement le bouton dans main.py
-            self.parent().btn_zoom.setChecked(False)
+            if hasattr(self.parent(), 'btn_zoom'):
+                self.parent().btn_zoom.setChecked(False)
+        if self.pan_mode:
+            self.deactivate_pan_mode()
+            if hasattr(self.parent(), 'btn_pan'):
+                self.parent().btn_pan.setChecked(False)
         
         self.zoom += event.angleDelta().y() * 0.005
         if self.is_ortho: 
@@ -209,36 +292,66 @@ class Viewer3D(QOpenGLWidget):
     def mousePressEvent(self, event):
         self.last_pos = event.pos()
         
-        # Si mode zoom activé ET clic gauche
+        # Mode Pan actif ET clic gauche
+        if self.pan_mode and event.button() == Qt.LeftButton:
+            self.is_panning = True
+            self.pan_start_x = event.x()
+            self.pan_start_y = event.y()
+            self.pan_start_pan_x = self.pan_x
+            self.pan_start_pan_y = self.pan_y
+            event.accept()
+            return
+        
+        # Mode Zoom actif ET clic gauche
         if self.zoom_mode and event.button() == Qt.LeftButton:
-            self.is_dragging = True
+            self.is_zooming = True
             self.zoom_start_y = event.y()
             self.zoom_start_value = self.zoom
             event.accept()
             return
         
-        # Clic droit : menu contextuel ET désactive le mode zoom
-        elif event.button() == Qt.RightButton:
+        # Clic droit : menu contextuel ET désactive tous les modes
+        if event.button() == Qt.RightButton:
             if self.zoom_mode:
                 self.deactivate_zoom_mode()
-                self.parent().btn_zoom.setChecked(False)
+                if hasattr(self.parent(), 'btn_zoom'):
+                    self.parent().btn_zoom.setChecked(False)
+            if self.pan_mode:
+                self.deactivate_pan_mode()
+                if hasattr(self.parent(), 'btn_pan'):
+                    self.parent().btn_pan.setChecked(False)
             self.context_menu.exec_(event.globalPos())
             event.accept()
             return
         
-        # Rotation/Pan : Clic milieu (désactive aussi le mode zoom)
-        elif event.button() == Qt.MidButton:
+        # Clic milieu : rotation (désactive aussi les modes)
+        if event.button() == Qt.MidButton:
             if self.zoom_mode:
                 self.deactivate_zoom_mode()
-                self.parent().btn_zoom.setChecked(False)
+                if hasattr(self.parent(), 'btn_zoom'):
+                    self.parent().btn_zoom.setChecked(False)
+            if self.pan_mode:
+                self.deactivate_pan_mode()
+                if hasattr(self.parent(), 'btn_pan'):
+                    self.parent().btn_pan.setChecked(False)
             event.accept()
             return
         
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # Zoom en mode drag (si mode zoom activé)
-        if self.zoom_mode and self.is_dragging:
+        # Pan en mode drag
+        if self.pan_mode and self.is_panning:
+            delta_x = event.x() - self.pan_start_x
+            delta_y = event.y() - self.pan_start_y
+            factor = abs(self.zoom) * 0.001
+            self.pan_x = self.pan_start_pan_x + (delta_x * factor)
+            self.pan_y = self.pan_start_pan_y - (delta_y * factor)
+            self.update()
+            return
+        
+        # Zoom en mode drag
+        if self.zoom_mode and self.is_zooming:
             delta_y = event.y() - self.zoom_start_y
             sensitivity = 0.01
             new_zoom = self.zoom_start_value + (delta_y * sensitivity)
@@ -267,9 +380,15 @@ class Viewer3D(QOpenGLWidget):
             self.update()
 
     def mouseReleaseEvent(self, event):
+        # Fin du drag pan
+        if event.button() == Qt.LeftButton and self.is_panning:
+            self.is_panning = False
+            event.accept()
+            return
+        
         # Fin du drag zoom
-        if event.button() == Qt.LeftButton and self.is_dragging:
-            self.is_dragging = False
+        if event.button() == Qt.LeftButton and self.is_zooming:
+            self.is_zooming = False
             event.accept()
             return
         

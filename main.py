@@ -67,8 +67,10 @@ class MainWindow(QMainWindow):
         self.btn_zoom.setCheckable(True)
         self.btn_zoom.setChecked(False)
         
-        # Bouton Pan (pas de fonction pour le moment)
-        self.btn_pan = NavButton("pan", "Pan (à venir)", False)
+        # Bouton Pan (Toggle avec icône)
+        self.btn_pan = NavButton("pan", "Mode Pan (Activer/sactiver)", True, False)
+        self.btn_pan.setCheckable(True)
+        self.btn_pan.setChecked(False)
         
         # Espace équivalent à la hauteur d'un bouton (30px) + espacement (8px)
         spacer = QSpacerItem(20, 38, QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -99,6 +101,7 @@ class MainWindow(QMainWindow):
 
         # Connexions
         self.btn_zoom.toggled.connect(self.toggle_zoom_mode)
+        self.btn_pan.toggled.connect(self.toggle_pan_mode)
         self.btn_proj.toggled.connect(self.toggle_projection)
         self.btn_home.clicked.connect(self.viewer.reset_view)
         self.btn_grid.toggled.connect(self.toggle_grid)
@@ -107,9 +110,22 @@ class MainWindow(QMainWindow):
     def toggle_zoom_mode(self, checked):
         """Active/désactive le mode zoom."""
         if checked:
+            # Désactiver le mode pan si actif
+            if self.btn_pan.isChecked():
+                self.btn_pan.setChecked(False)
             self.viewer.activate_zoom_mode()
         else:
             self.viewer.deactivate_zoom_mode()
+
+    def toggle_pan_mode(self, checked):
+        """Active/désactive le mode pan."""
+        if checked:
+            # Désactiver le mode zoom si actif
+            if self.btn_zoom.isChecked():
+                self.btn_zoom.setChecked(False)
+            self.viewer.activate_pan_mode()
+        else:
+            self.viewer.deactivate_pan_mode()
 
     def toggle_projection(self, checked):
         """Bascule entre Perspective (False) et Orthographique (True)."""
@@ -131,8 +147,8 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Positionnement dynamique sous le Gizmo (6 boutons + espace)
-        self.nav_frame.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 230)
+        # Positionnement dynamique sous le Gizmo (7 boutons + espace)
+        self.nav_frame.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 270)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

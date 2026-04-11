@@ -16,6 +16,9 @@ class MenuBar:
     @staticmethod
     def render(width, height):
         """Affiche la barre de menu en haut de la fenêtre."""
+        if width == 0 or height == 0:
+            return
+            
         # --- Configuration de la vue 2D (Overlay) ---
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
@@ -30,9 +33,9 @@ class MenuBar:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        # --- 1. Arrière-plan de la barre (optionnel, gris sombre type Blender) ---
-        bar_height = 24
-        glColor4f(0.15, 0.15, 0.15, 1.0)
+        # --- 1. Arrière-plan de la barre ---
+        bar_height = 28
+        glColor4f(0.18, 0.18, 0.18, 1.0)  # Gris foncé type Blender
         glBegin(GL_QUADS)
         glVertex2f(0, height - bar_height)
         glVertex2f(width, height - bar_height)
@@ -40,26 +43,42 @@ class MenuBar:
         glVertex2f(0, height)
         glEnd()
 
-        # --- 2. Menu à GAUCHE ---
-        glColor3f(0.9, 0.9, 0.9) # Texte presque blanc
-        margin_x = 15
-        text_y = height - 17 # Centrage vertical dans la barre
+        # --- 2. Ligne de séparation en bas de la barre ---
+        glColor4f(0.3, 0.3, 0.3, 1.0)
+        glLineWidth(1.0)
+        glBegin(GL_LINES)
+        glVertex2f(0, height - bar_height)
+        glVertex2f(width, height - bar_height)
+        glEnd()
+
+        # --- 3. Menu à GAUCHE ---
+        glColor3f(0.85, 0.85, 0.85)  # Texte gris clair
+        margin_x = 12
+        text_y = height - 20  # Centrage vertical dans la barre (28px de haut)
         
-        # On définit les labels et on les espace
-        menus = ["File", "Edit", "Render", "Window"]
+        # Labels du menu
+        menus = ["File", "Edit", "View", "Render", "Window", "Help"]
         current_x = margin_x
-        spacing = 50 # Espace entre les mots
+        spacing = 45  # Espace entre les mots
         
         for label in menus:
             MenuBar.draw_text(current_x, text_y, label)
             current_x += spacing
 
-        # --- 3. Aide à DROITE ---
-        help_label = "?"
-        help_margin_right = 20
-        # On calcule la position en partant de la largeur totale
-        MenuBar.draw_text(width - help_margin_right, text_y, help_label)
+        # --- 4. Informations supplémentaires à DROITE ---
+        # Version de l'application
+        version_text = f"{APP_NAME} v1.0"
+        version_width = len(version_text) * 7  # Approximation largeur texte
+        right_margin = 80
+        MenuBar.draw_text(width - right_margin, text_y, version_text)
+        
+        # Stats (optionnel)
+        # stats_text = "FPS: 60"
+        # MenuBar.draw_text(width - 25, text_y, stats_text)
 
+        # --- 5. Surbrillance au survol (à implémenter avec détection de souris) ---
+        # Pour l'instant, simple affichage
+        
         # --- Restauration de l'état ---
         glDisable(GL_BLEND)
         glEnable(GL_DEPTH_TEST)
