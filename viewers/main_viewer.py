@@ -9,7 +9,7 @@ from .gizmo import Gizmo
 from menus.context_menu import MainContextMenu
 
 # Constante pour le décalage vertical des boutons (utilisée dans main.py)
-TOP_BT_NAV = 45 
+TOP_BT_NAV = 60 
 
 class Viewer3D(QOpenGLWidget):
     def __init__(self, parent=None):
