@@ -2,6 +2,7 @@
 import numpy as np
 from PyQt5.QtWidgets import QOpenGLWidget, QApplication
 from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtGui import QCursor, QPixmap, QPainter, QPen, QColor
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from config.settings import *
@@ -9,7 +10,7 @@ from .gizmo import Gizmo
 from menus.context_menu import MainContextMenu
 
 # Constante pour le décalage vertical des boutons (utilisée dans main.py)
-TOP_BT_NAV = 60 
+TOP_BT_NAV = 45 
 
 class Viewer3D(QOpenGLWidget):
     def __init__(self, parent=None):
@@ -25,10 +26,59 @@ class Viewer3D(QOpenGLWidget):
         self.last_pos = QPoint()
         self.is_ortho = False
         self.show_grid = True
-        self.show_axes = True  # AJOUTÉ : contrôle des axes
+        self.show_axes = True
         self.context_menu = MainContextMenu(self)
+        
+        # État pour le zoom (mode toggle)
+        self.zoom_mode = False
+        self.zoom_start_y = 0
+        self.zoom_start_value = 0.0
+        self.is_dragging = False
+        
+        # Créer un curseur personnalisé pour le mode zoom
+        self.zoom_cursor = self.create_zoom_cursor()
 
-    # --- MÉTHODES DE CONTRÔLE (Interfacées avec main.py) ---
+    def create_zoom_cursor(self):
+        """Crée un curseur personnalisé pour le mode zoom."""
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Dessiner un cercle
+        painter.setPen(QPen(QColor(200, 200, 200), 2))
+        painter.setBrush(QColor(60, 60, 60, 200))
+        painter.drawEllipse(2, 2, 28, 28)
+        
+        # Dessiner les flèches haut/bas
+        painter.setPen(QPen(QColor(255, 255, 255), 2))
+        painter.drawLine(16, 8, 16, 20)
+        painter.drawLine(12, 12, 16, 8)
+        painter.drawLine(20, 12, 16, 8)
+        painter.drawLine(16, 24, 16, 12)
+        painter.drawLine(12, 20, 16, 24)
+        painter.drawLine(20, 20, 16, 24)
+        
+        painter.end()
+        
+        return QCursor(pixmap, 16, 16)
+
+    def activate_zoom_mode(self):
+        """Active le mode zoom."""
+        self.zoom_mode = True
+        self.setCursor(self.zoom_cursor)
+        print("Mode Zoom ACTIVÉ - Cliquez et glissez verticalement pour zoomer")
+    
+    def deactivate_zoom_mode(self):
+        """Désactive le mode zoom."""
+        if self.zoom_mode:
+            self.zoom_mode = False
+            self.is_dragging = False
+            self.unsetCursor()
+            print("Mode Zoom DÉSACTIVÉ")
+
+    # --- MÉTHODES DE CONTRÔLE ---
 
     def set_projection(self, ortho_mode):
         """Bascule entre Perspective (False) et Ortho (True)."""
@@ -92,7 +142,7 @@ class Viewer3D(QOpenGLWidget):
         self.draw_cube_centered()
         glDepthMask(GL_TRUE)
         
-        if self.show_axes:  # MODIFIÉ : condition pour les axes
+        if self.show_axes:
             self.draw_world_axes()
         
         # Gizmo 2D
@@ -124,7 +174,7 @@ class Viewer3D(QOpenGLWidget):
 
     def draw_world_axes(self):
         glLineWidth(2.5)
-        glDepthRange(0.0, 0.999) # Priorité visuelle
+        glDepthRange(0.0, 0.999)
         glBegin(GL_LINES)
         glColor3f(*C_RED); glVertex3f(-10, 0, 0); glVertex3f(10, 0, 0)
         glColor3f(*C_BLUE); glVertex3f(0, 0, -10); glVertex3f(0, 0, 10)
@@ -145,27 +195,85 @@ class Viewer3D(QOpenGLWidget):
     # --- INPUTS ---
 
     def wheelEvent(self, event):
+        # Molette : zoom normal ET désactive le mode zoom
+        if self.zoom_mode:
+            self.deactivate_zoom_mode()
+            # Désactiver visuellement le bouton dans main.py
+            self.parent().btn_zoom.setChecked(False)
+        
         self.zoom += event.angleDelta().y() * 0.005
-        if self.is_ortho: self.update_projection()
+        if self.is_ortho: 
+            self.update_projection()
         self.update()
 
+    def mousePressEvent(self, event):
+        self.last_pos = event.pos()
+        
+        # Si mode zoom activé ET clic gauche
+        if self.zoom_mode and event.button() == Qt.LeftButton:
+            self.is_dragging = True
+            self.zoom_start_y = event.y()
+            self.zoom_start_value = self.zoom
+            event.accept()
+            return
+        
+        # Clic droit : menu contextuel ET désactive le mode zoom
+        elif event.button() == Qt.RightButton:
+            if self.zoom_mode:
+                self.deactivate_zoom_mode()
+                self.parent().btn_zoom.setChecked(False)
+            self.context_menu.exec_(event.globalPos())
+            event.accept()
+            return
+        
+        # Rotation/Pan : Clic milieu (désactive aussi le mode zoom)
+        elif event.button() == Qt.MidButton:
+            if self.zoom_mode:
+                self.deactivate_zoom_mode()
+                self.parent().btn_zoom.setChecked(False)
+            event.accept()
+            return
+        
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event):
+        # Zoom en mode drag (si mode zoom activé)
+        if self.zoom_mode and self.is_dragging:
+            delta_y = event.y() - self.zoom_start_y
+            sensitivity = 0.01
+            new_zoom = self.zoom_start_value + (delta_y * sensitivity)
+            self.zoom = new_zoom
+            
+            if self.is_ortho:
+                self.update_projection()
+            self.update()
+            return
+        
+        # Rotation et Pan au clic milieu
         diff = event.pos() - self.last_pos
         self.last_pos = event.pos()
+
         if event.buttons() & Qt.MidButton:
             if QApplication.keyboardModifiers() & Qt.ShiftModifier:
+                # PANNING
                 factor = abs(self.zoom) * 0.001
                 self.pan_x += diff.x() * factor
                 self.pan_y -= diff.y() * factor
             else:
+                # ROTATION
                 self.rot_y += diff.x() * 0.5
                 self.rot_x += diff.y() * 0.5
+            
             self.update()
 
-    def mousePressEvent(self, event):
-        self.last_pos = event.pos()
-        if event.button() == Qt.RightButton:
-            self.context_menu.exec_(event.globalPos())
+    def mouseReleaseEvent(self, event):
+        # Fin du drag zoom
+        if event.button() == Qt.LeftButton and self.is_dragging:
+            self.is_dragging = False
+            event.accept()
+            return
+        
+        super().mouseReleaseEvent(event)
 
     def resizeGL(self, w, h):
         self.update_projection()

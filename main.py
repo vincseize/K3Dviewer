@@ -2,7 +2,7 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QFrame, QPushButton, QSpacerItem, QSizePolicy)
-from PyQt5.QtGui import QSurfaceFormat, QIcon, QPixmap, QPainter
+from PyQt5.QtGui import QSurfaceFormat, QIcon, QPixmap, QPainter, QCursor
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtCore import Qt, QSize
 from viewers.main_viewer import Viewer3D, TOP_BT_NAV
@@ -62,8 +62,10 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(8)
 
-        # Bouton Zoom (pas de fonction pour le moment)
-        self.btn_zoom = NavButton("zoom", "Zoom (à venir)", False)
+        # Bouton Zoom (Toggle avec icône)
+        self.btn_zoom = NavButton("zoom", "Mode Zoom (Activer/Désactiver)", True, False)
+        self.btn_zoom.setCheckable(True)
+        self.btn_zoom.setChecked(False)
         
         # Bouton Pan (pas de fonction pour le moment)
         self.btn_pan = NavButton("pan", "Pan (à venir)", False)
@@ -89,18 +91,25 @@ class MainWindow(QMainWindow):
         # On ajoute au layout
         layout.addWidget(self.btn_zoom)
         layout.addWidget(self.btn_pan)
-        layout.addItem(spacer)  # Espace d'un bouton
+        layout.addItem(spacer)
         layout.addWidget(self.btn_proj)
         layout.addWidget(self.btn_home)
         layout.addWidget(self.btn_grid)
         layout.addWidget(self.btn_axes)
 
         # Connexions
+        self.btn_zoom.toggled.connect(self.toggle_zoom_mode)
         self.btn_proj.toggled.connect(self.toggle_projection)
         self.btn_home.clicked.connect(self.viewer.reset_view)
         self.btn_grid.toggled.connect(self.toggle_grid)
         self.btn_axes.toggled.connect(self.toggle_axes)
-        # Pas de connexions pour zoom et pan pour le moment
+
+    def toggle_zoom_mode(self, checked):
+        """Active/désactive le mode zoom."""
+        if checked:
+            self.viewer.activate_zoom_mode()
+        else:
+            self.viewer.deactivate_zoom_mode()
 
     def toggle_projection(self, checked):
         """Bascule entre Perspective (False) et Orthographique (True)."""
