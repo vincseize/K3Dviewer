@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout,
 from PyQt5.QtGui import QSurfaceFormat, QIcon, QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtCore import Qt, QSize
-from viewers.main_viewer import Viewer3D
+from viewers.main_viewer import Viewer3D, TOP_BT_NAV
 from config.settings import *
 
 SVG_ICONS = {
@@ -89,8 +89,8 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Positionnement dynamique sous le Gizmo (Top-Right)
-        # 110 pixels du haut pour laisser la place au Gizmo
-        self.nav_frame.setGeometry(self.width() - 45, 115, 40, 180)
+        # Utilisation de TOP_BT_NAV pour le décalage vertical
+        self.nav_frame.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 180)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

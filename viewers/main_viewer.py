@@ -1,12 +1,15 @@
 # viewers/main_viewer.py
 import numpy as np
-from PyQt5.QtWidgets import QOpenGLWidget, QApplication, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QOpenGLWidget, QApplication
 from PyQt5.QtCore import Qt, QPoint
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from config.settings import *
 from .gizmo import Gizmo
 from menus.context_menu import MainContextMenu
+
+# Constante pour le décalage vertical des boutons (utilisée dans main.py)
+TOP_BT_NAV = 20  # 10 pixels de base + 10 supplémentaires = 20px du haut
 
 class Viewer3D(QOpenGLWidget):
     def __init__(self, parent=None):
@@ -15,69 +18,31 @@ class Viewer3D(QOpenGLWidget):
         self.zoom = self.def_zoom
         self.pan_x, self.pan_y = 0.0, 0.0
         
-        # Angles pour le mode "Turntable" (Blender style)
-        self.rot_x = 25.0  # Inclinaison
-        self.rot_y = -45.0 # Orbite
+        # Angles Turntable (Blender Style)
+        self.rot_x = 25.0
+        self.rot_y = -45.0
         
         self.last_pos = QPoint()
         self.is_ortho = False
         self.show_grid = True
         self.context_menu = MainContextMenu(self)
-        
-        # Création de l'overlay (Bouton Reset uniquement)
-        self.setup_overlay_buttons()
 
-    def setup_overlay_buttons(self):
-        """Crée le bouton circulaire Reset View en haut à droite."""
-        self.button_container = QWidget(self)
-        self.button_container.setStyleSheet("""
-            QWidget { background: transparent; }
-            QPushButton {
-                background-color: rgba(60, 60, 60, 200);
-                border: 1px solid rgba(100, 100, 100, 255);
-                border-radius: 16px;
-                color: white;
-                font-size: 16px;
-                min-width: 32px; max-width: 32px;
-                min-height: 32px; max-height: 32px;
-            }
-            QPushButton:hover { background-color: rgba(80, 80, 80, 220); }
-        """)
-        
-        layout = QVBoxLayout(self.button_container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.reset_button = QPushButton()
-        self.reset_button.setText("↺")
-        self.reset_button.setToolTip("Réinitialiser la vue")
-        self.reset_button.clicked.connect(self.reset_view)
-        layout.addWidget(self.reset_button)
-        
-    def resizeEvent(self, event):
-        """Positionne le bouton d'overlay."""
-        super().resizeEvent(event)
-        button_size = 34
-        x_pos = self.width() - button_size - 10
-        y_pos = 20 
-        self.button_container.setGeometry(x_pos, y_pos, button_size, button_size)
-        self.button_container.raise_()
-
-    # --- MÉTHODES DE CONTRÔLE (Appelées par main.py) ---
+    # --- MÉTHODES DE CONTRÔLE (Interfacées avec main.py) ---
 
     def set_projection(self, ortho_mode):
-        """Définit le mode de projection (True=Ortho, False=Persp)."""
+        """Bascule entre Perspective (False) et Ortho (True)."""
         self.is_ortho = ortho_mode
         self.makeCurrent()
         self.update_projection()
         self.update()
 
     def set_grid_visible(self, visible):
-        """Affiche ou masque la grille."""
+        """Affiche/Masque la grille au sol."""
         self.show_grid = visible
         self.update()
 
     def reset_view(self):
-        """Réinitialise la position et les angles de la caméra."""
+        """Action 'Home' : Réinitialise la caméra."""
         self.makeCurrent()
         self.zoom = self.def_zoom
         self.pan_x, self.pan_y = 0.0, 0.0
@@ -86,7 +51,7 @@ class Viewer3D(QOpenGLWidget):
         self.update_projection()
         self.update()
 
-    # --- LOGIQUE OPENGL ---
+    # --- LOGIQUE DE RENDU ---
 
     def update_projection(self):
         w, h = self.width(), self.height()
@@ -106,26 +71,24 @@ class Viewer3D(QOpenGLWidget):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
         
-        # Application de la transformation de vue
+        # Transformations de vue
         glTranslatef(self.pan_x, self.pan_y, self.zoom)
         glRotatef(self.rot_x, 1, 0, 0)
         glRotatef(self.rot_y, 0, 1, 0)
         
         mv_matrix = glGetFloatv(GL_MODELVIEW_MATRIX)
 
-        # Dessin de la grille
         if self.show_grid: 
             self.draw_grid()
         
-        # Dessin du cube (avec correction de clignotement)
+        # Cube avec DepthMask pour éviter le clignotement
         glDepthMask(GL_FALSE)
         self.draw_cube_centered()
         glDepthMask(GL_TRUE)
         
-        # Dessin des axes mondiaux
         self.draw_world_axes()
         
-        # Rendu du Gizmo en overlay 2D
+        # Gizmo 2D
         glDisable(GL_DEPTH_TEST)
         Gizmo.render(self.width(), self.height(), mv_matrix)
         glEnable(GL_DEPTH_TEST)
@@ -154,7 +117,7 @@ class Viewer3D(QOpenGLWidget):
 
     def draw_world_axes(self):
         glLineWidth(2.5)
-        glDepthRange(0.0, 0.999)
+        glDepthRange(0.0, 0.999) # Priorité visuelle
         glBegin(GL_LINES)
         glColor3f(*C_RED); glVertex3f(-10, 0, 0); glVertex3f(10, 0, 0)
         glColor3f(*C_BLUE); glVertex3f(0, 0, -10); glVertex3f(0, 0, 10)
@@ -172,7 +135,7 @@ class Viewer3D(QOpenGLWidget):
             for vertex in edge: glVertex3fv(v[vertex])
         glEnd()
 
-    # --- ÉVÉNEMENTS SOURIS ---
+    # --- INPUTS ---
 
     def wheelEvent(self, event):
         self.zoom += event.angleDelta().y() * 0.005
