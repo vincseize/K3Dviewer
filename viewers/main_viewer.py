@@ -187,29 +187,44 @@ class Viewer3D(QOpenGLWidget):
     # --- EVENTS ---
 
     def wheelEvent(self, event):
-        self._sync_navbar_ui()
+        # On supprime self._sync_navbar_ui() pour garder les icônes actives
         delta = event.angleDelta().y()
+        # Calcul du nouveau zoom avec limites
         self.zoom = np.clip(self.zoom + delta * 0.005, -30.0, -2.0)
+        
+        # Si on est en mode Ortho, il faut mettre à jour la matrice de projection
         self.update_projection()
         self.update()
 
     def mousePressEvent(self, event):
         self.last_pos = event.pos()
+        
+        # 1. Barre de menu (File, Edit, etc.)
         if MenuBar.handle_click(event.x(), self.height(), self.height()):
-            self.update(); return
+            self.update()
+            return
 
+        # 2. Mode Pan (Clic Gauche)
         if self.pan_mode and event.button() == Qt.LeftButton:
             self.is_panning = True
             self.pan_start_x, self.pan_start_y = event.x(), event.y()
             self.pan_start_pan_x, self.pan_start_pan_y = self.pan_x, self.pan_y
+            
+        # 3. Mode Zoom (Clic Gauche)
         elif self.zoom_mode and event.button() == Qt.LeftButton:
             self.is_zooming = True
             self.zoom_start_y, self.zoom_start_value = event.y(), self.zoom
+            
+        # 4. Clic Droit : Menu Contextuel (Garde l'icône bleue)
         elif event.button() == Qt.RightButton:
-            self._sync_navbar_ui()
             self.context_menu.exec_(event.globalPos())
+            
+        # 5. Clic Milieu : Rotation
         elif event.button() == Qt.MidButton:
-            self._sync_navbar_ui()
+            # CONDITION : On ne synchronise (désactive) les icônes 
+            # QUE SI on n'est pas déjà dans un mode actif.
+            if not self.pan_mode and not self.zoom_mode:
+                self._sync_navbar_ui()
 
     def mouseMoveEvent(self, event):
         if self.pan_mode and self.is_panning:
@@ -237,6 +252,24 @@ class Viewer3D(QOpenGLWidget):
     def mouseReleaseEvent(self, event):
         self.is_panning = False
         self.is_zooming = False
+
+    def keyPressEvent(self, event):
+        # Si on appuie sur ESC
+        if event.key() == Qt.Key_Escape:
+            # On vérifie si un mode est actif avant de reset
+            if self.pan_mode or self.zoom_mode:
+                # 1. On désactive les modes internes
+                self.activate_pan_mode(False)
+                self.activate_zoom_mode(False)
+                
+                # 2. On synchronise l'UI de la barre latérale
+                self._sync_navbar_ui()
+                
+                # 3. On force un rafraîchissement visuel
+                self.update()
+        
+        # Important : laisser passer les autres touches si nécessaire
+        super().keyPressEvent(event)
 
     def initializeGL(self):
         glutInit()

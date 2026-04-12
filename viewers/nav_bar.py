@@ -43,16 +43,11 @@ class SideNavBar(QFrame):
         self.btn_axes.toggled.connect(self.viewer.set_axes_visible)
 
     def uncheck_all_modes(self):
-        """
-        Désactive les modes Zoom et Pan visuellement sans 
-        déclencher de boucle infinie de signaux.
-        """
+        """Désactive visuellement Zoom et Pan (utilisé pour le clic milieu)"""
         self.btn_zoom.blockSignals(True)
         self.btn_pan.blockSignals(True)
-        
         self.btn_zoom.setChecked(False)
         self.btn_pan.setChecked(False)
-        
         self.btn_zoom.blockSignals(False)
         self.btn_pan.blockSignals(False)
 
@@ -73,3 +68,12 @@ class SideNavBar(QFrame):
             self.viewer.activate_pan_mode(True)
         else:
             self.viewer.activate_pan_mode(False)
+
+    def update_button_states(self):
+        """Force l'état visuel selon les variables du viewer"""
+        self.btn_zoom.blockSignals(True)
+        self.btn_pan.blockSignals(True)
+        self.btn_zoom.setChecked(self.viewer.zoom_mode)
+        self.btn_pan.setChecked(self.viewer.pan_mode)
+        self.btn_zoom.blockSignals(False)
+        self.btn_pan.blockSignals(False)
