@@ -13,6 +13,7 @@ G_TOP      = 0.80
 G_RIGHT    = 0.16
 L_SIZE     = 0.02
 L_WIDTH    = 1.5
+TOP_BT_NAV = 50
 
 # Couleurs Blender Style (RGB)
 C_RED      = (1.0, 0.22, 0.26)  # X
