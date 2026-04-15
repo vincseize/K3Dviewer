@@ -11,7 +11,7 @@ from .viewer_core import ViewerCore
 from .viewer_navigation import ViewerNavigation
 from .viewer_rendering import ViewerRendering
 from .gizmo import Gizmo
-from .menu_bar import MenuBar
+# from .menu_bar import MenuBar
 from menus.context_menu import MainContextMenu
 
 class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
@@ -46,7 +46,7 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
         glDisable(GL_DEPTH_TEST)
         Gizmo.render(self.width(), self.height(), mv_matrix)
         cursor_pos = self.mapFromGlobal(QCursor.pos())
-        MenuBar.render(self.width(), self.height(), cursor_pos.x(), self.height() - cursor_pos.y())
+        # MenuBar.render(self.width(), self.height(), cursor_pos.x(), self.height() - cursor_pos.y())
         glEnable(GL_DEPTH_TEST)
 
     def activate_zoom_mode(self, checked):
@@ -75,9 +75,9 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
 
     def mousePressEvent(self, event):
         self.last_pos = event.pos()
-        if MenuBar.handle_click(event.x(), self.height(), self.height()):
-            self.update()
-            return
+        # if MenuBar.handle_click(event.x(), self.height(), self.height()):
+        #     self.update()
+        #     return
         
         if self.pan_mode and event.button() == Qt.LeftButton: 
             self.is_panning = True

@@ -1,7 +1,7 @@
 # main.py
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
-                             QFrame, QWidget, QHBoxLayout, QPushButton, QLabel)
+                             QFrame, QWidget, QHBoxLayout, QPushButton, QLabel, QMenu, QAction, QMenuBar)
 from PyQt5.QtGui import QSurfaceFormat, QFont, QColor
 from PyQt5.QtCore import Qt, QPoint
 from viewers.main_viewer import Viewer3D
@@ -40,6 +40,20 @@ class TitleBar(QWidget):
             }}
             QPushButton#close:hover {{
                 background-color: #e81123;
+            }}
+            QMenuBar {{
+                background-color: {APP_COLOR_EXE};
+                color: white;
+                border-bottom: 1px solid #2a4a6a;
+                min-height: 24px;
+                max-height: 28px;
+                margin-right: 0px;
+                padding-right: 0px;
+            }}
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 2px 8px;
+                margin: 0px;
             }}
         """)
         
@@ -124,8 +138,16 @@ class MainWindow(QMainWindow):
         self.title_bar = TitleBar(self)
         central_layout.addWidget(self.title_bar)
         
-        # Viewer 3D
+        # Viewer 3D (créé avant la barre de menu)
         self.viewer = Viewer3D()
+        
+        # Barre de menu standard avec hauteur fixe
+        self.setup_menu_bar()
+        menu_bar = self.menuBar()
+        menu_bar.setFixedHeight(28)
+        central_layout.addWidget(menu_bar)
+        
+        # Ajouter le viewer après la barre de menu
         central_layout.addWidget(self.viewer)
         
         self.setCentralWidget(central_widget)
@@ -139,10 +161,161 @@ class MainWindow(QMainWindow):
         # Variables pour le déplacement
         self.drag_start_pos = None
 
+    def setup_menu_bar(self):
+        """Configure la barre de menu standard Qt"""
+        menuBar = self.menuBar()
+        menuBar.setStyleSheet(f"""
+            QMenuBar {{
+                background-color: {APP_COLOR_EXE};
+                color: white;
+                border-bottom: 1px solid #2a4a6a;
+                min-height: 24px;
+                max-height: 28px;
+            }}
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 2px 8px;
+                margin: 0px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: #2a5a8a;
+            }}
+            QMenu {{
+                background-color: #2a2a2a;
+                color: white;
+                border: 1px solid #444;
+            }}
+            QMenu::item {{
+                padding: 5px 30px;
+            }}
+            QMenu::item:selected {{
+                background-color: #0078d7;
+            }}
+        """)
+        
+        # File menu
+        fileMenu = QMenu("&File", self)
+        menuBar.addMenu(fileMenu)
+        
+        self.newAction = QAction("&New", self)
+        self.newAction.setShortcut("Ctrl+N")
+        self.newAction.triggered.connect(self._on_new)
+        fileMenu.addAction(self.newAction)
+        
+        self.openAction = QAction("&Open...", self)
+        self.openAction.setShortcut("Ctrl+O")
+        self.openAction.triggered.connect(self._on_open)
+        fileMenu.addAction(self.openAction)
+        
+        self.saveAction = QAction("&Save", self)
+        self.saveAction.setShortcut("Ctrl+S")
+        self.saveAction.triggered.connect(self._on_save)
+        fileMenu.addAction(self.saveAction)
+        
+        fileMenu.addSeparator()
+        
+        self.exitAction = QAction("E&xit", self)
+        self.exitAction.setShortcut("Ctrl+Q")
+        self.exitAction.triggered.connect(self.close)
+        fileMenu.addAction(self.exitAction)
+        
+        # Edit menu
+        editMenu = QMenu("&Edit", self)
+        menuBar.addMenu(editMenu)
+        
+        self.copyAction = QAction("&Copy", self)
+        self.copyAction.setShortcut("Ctrl+C")
+        self.copyAction.triggered.connect(self._on_copy)
+        editMenu.addAction(self.copyAction)
+        
+        self.pasteAction = QAction("&Paste", self)
+        self.pasteAction.setShortcut("Ctrl+V")
+        self.pasteAction.triggered.connect(self._on_paste)
+        editMenu.addAction(self.pasteAction)
+        
+        self.cutAction = QAction("Cu&t", self)
+        self.cutAction.setShortcut("Ctrl+X")
+        self.cutAction.triggered.connect(self._on_cut)
+        editMenu.addAction(self.cutAction)
+        
+        # View menu
+        viewMenu = QMenu("&View", self)
+        menuBar.addMenu(viewMenu)
+        
+        self.gridAction = QAction("Show Grid", self, checkable=True)
+        self.gridAction.setChecked(self.viewer.show_grid)
+        self.gridAction.triggered.connect(lambda: self.viewer.set_grid_visible(self.gridAction.isChecked()))
+        viewMenu.addAction(self.gridAction)
+        
+        self.axesAction = QAction("Show Axes", self, checkable=True)
+        self.axesAction.setChecked(self.viewer.show_axes)
+        self.axesAction.triggered.connect(lambda: self.viewer.set_axes_visible(self.axesAction.isChecked()))
+        viewMenu.addAction(self.axesAction)
+        
+        viewMenu.addSeparator()
+        
+        self.projectionAction = QAction("Toggle Perspective/Ortho", self)
+        self.projectionAction.triggered.connect(lambda: self.viewer.set_projection(not self.viewer.is_ortho))
+        viewMenu.addAction(self.projectionAction)
+        
+        viewMenu.addSeparator()
+        
+        self.resetViewAction = QAction("Reset View", self)
+        self.resetViewAction.setShortcut("Home")
+        self.resetViewAction.triggered.connect(self.viewer.reset_view)
+        viewMenu.addAction(self.resetViewAction)
+        
+        # Ajouter un espaceur extensible avant le menu "?"
+        # Pour pousser "?" tout à droite
+        spacer = QWidget()
+        spacer.setSizePolicy(QWidget().sizePolicy().Expanding, QWidget().sizePolicy().Preferred)
+        menuBar.setCornerWidget(spacer, Qt.TopRightCorner)
+        
+        # Menu "?" à droite (sera poussé par le spacer)
+        helpMenu = QMenu("&?", self)
+        menuBar.addMenu(helpMenu)
+        
+        self.aboutAction = QAction("&About", self)
+        self.aboutAction.triggered.connect(self._on_about)
+        helpMenu.addAction(self.aboutAction)
+        
+        self.aboutQtAction = QAction("About &Qt", self)
+        self.aboutQtAction.triggered.connect(QApplication.aboutQt)
+        helpMenu.addAction(self.aboutQtAction)
+    
+    def _on_new(self):
+        """Nouveau fichier"""
+        print("New action triggered")
+        
+    def _on_open(self):
+        """Ouvrir un fichier"""
+        print("Open action triggered")
+        
+    def _on_save(self):
+        """Sauvegarder"""
+        print("Save action triggered")
+        
+    def _on_copy(self):
+        """Copier"""
+        print("Copy action triggered")
+        
+    def _on_paste(self):
+        """Coller"""
+        print("Paste action triggered")
+        
+    def _on_cut(self):
+        """Couper"""
+        print("Cut action triggered")
+        
+    def _on_about(self):
+        """À propos"""
+        from PyQt5.QtWidgets import QMessageBox
+        QMessageBox.about(self, "About", f"{APP_NAME}\nVersion 1.0\n\n3D Viewer Application")
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Positionner la barre de navigation latérale
-        self.nav_bar.setGeometry(self.width() - 45, 100 + TOP_BT_NAV, 40, 270)
+        # Positionner la barre de navigation latérale (32px title + 28px menu = 60px)
+        self.nav_bar.setGeometry(self.width() - 45, 60 + TOP_BT_NAV, 40, 270)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
