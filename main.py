@@ -8,54 +8,22 @@ from viewers.main_viewer import Viewer3D
 from viewers.nav_controls import SideNavBar
 from config.settings import APP_NAME, APP_COLOR_EXE, TOP_BT_NAV
 
+def load_stylesheet(filename):
+    """Charge un fichier QSS et remplace les variables"""
+    with open(filename, 'r') as f:
+        stylesheet = f.read()
+    # Remplacer les variables de couleur
+    stylesheet = stylesheet.replace('#204060', APP_COLOR_EXE)
+    return stylesheet
+
 class TitleBar(QWidget):
     """Barre de titre personnalisée avec boutons de contrôle"""
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
         self.setFixedHeight(32)
-        self.setStyleSheet(f"""
-            TitleBar {{
-                background-color: {APP_COLOR_EXE};
-                border-bottom: 1px solid #2a4a6a;
-            }}
-            QLabel {{
-                color: white;
-                font-size: 12px;
-                font-weight: bold;
-                padding-left: 10px;
-                background-color: {APP_COLOR_EXE};
-            }}
-            QPushButton {{
-                background-color: {APP_COLOR_EXE};
-                border: none;
-                color: white;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 5px 10px;
-                border-radius: 3px;
-            }}
-            QPushButton:hover {{
-                background-color: #2a5a8a;
-            }}
-            QPushButton#close:hover {{
-                background-color: #e81123;
-            }}
-            QMenuBar {{
-                background-color: {APP_COLOR_EXE};
-                color: white;
-                border-bottom: 1px solid #2a4a6a;
-                min-height: 24px;
-                max-height: 28px;
-                margin-right: 0px;
-                padding-right: 0px;
-            }}
-            QMenuBar::item {{
-                background-color: transparent;
-                padding: 2px 8px;
-                margin: 0px;
-            }}
-        """)
+        # Le style est maintenant chargé depuis le fichier externe
+        self.setStyleSheet(load_stylesheet('stylesheets/menuBar-stylesheet.qss'))
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -164,34 +132,8 @@ class MainWindow(QMainWindow):
     def setup_menu_bar(self):
         """Configure la barre de menu standard Qt"""
         menuBar = self.menuBar()
-        menuBar.setStyleSheet(f"""
-            QMenuBar {{
-                background-color: {APP_COLOR_EXE};
-                color: white;
-                border-bottom: 1px solid #2a4a6a;
-                min-height: 24px;
-                max-height: 28px;
-            }}
-            QMenuBar::item {{
-                background-color: transparent;
-                padding: 2px 8px;
-                margin: 0px;
-            }}
-            QMenuBar::item:selected {{
-                background-color: #2a5a8a;
-            }}
-            QMenu {{
-                background-color: #2a2a2a;
-                color: white;
-                border: 1px solid #444;
-            }}
-            QMenu::item {{
-                padding: 5px 30px;
-            }}
-            QMenu::item:selected {{
-                background-color: #0078d7;
-            }}
-        """)
+        # Charger le style depuis le fichier externe
+        menuBar.setStyleSheet(load_stylesheet('stylesheets/menuBar-stylesheet.qss'))
         
         # File menu
         fileMenu = QMenu("&File", self)
@@ -266,12 +208,11 @@ class MainWindow(QMainWindow):
         viewMenu.addAction(self.resetViewAction)
         
         # Ajouter un espaceur extensible avant le menu "?"
-        # Pour pousser "?" tout à droite
         spacer = QWidget()
         spacer.setSizePolicy(QWidget().sizePolicy().Expanding, QWidget().sizePolicy().Preferred)
         menuBar.setCornerWidget(spacer, Qt.TopRightCorner)
         
-        # Menu "?" à droite (sera poussé par le spacer)
+        # Menu "?" à droite
         helpMenu = QMenu("&?", self)
         menuBar.addMenu(helpMenu)
         

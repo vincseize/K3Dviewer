@@ -1,0 +1,68 @@
+/* stylesheets/menuBar-stylesheet.qss */
+
+/* Style pour la TitleBar */
+TitleBar {
+    background-color: #204060;
+    border-bottom: 1px solid #2a4a6a;
+}
+
+QLabel {
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    padding-left: 10px;
+    background-color: #204060;
+}
+
+QPushButton {
+    background-color: #204060;
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 3px;
+}
+
+QPushButton:hover {
+    background-color: #2a5a8a;
+}
+
+QPushButton#close:hover {
+    background-color: #e81123;
+}
+
+/* Style pour la MenuBar */
+QMenuBar {
+    background-color: #204060;
+    color: white;
+    border-bottom: 1px solid #2a4a6a;
+    min-height: 24px;
+    max-height: 28px;
+    margin-right: 0px;
+    padding-right: 0px;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    padding: 2px 8px;
+    margin: 0px;
+}
+
+QMenuBar::item:selected {
+    background-color: #2a5a8a;
+}
+
+QMenu {
+    background-color: #2a2a2a;
+    color: white;
+    border: 1px solid #444;
+}
+
+QMenu::item {
+    padding: 5px 30px;
+}
+
+QMenu::item:selected {
+    background-color: #0078d7;
+}
