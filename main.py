@@ -2,11 +2,13 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QFrame, QWidget, QHBoxLayout, QPushButton, QLabel, QMenu, QAction, QMenuBar)
-from PyQt5.QtGui import QSurfaceFormat, QFont, QColor
-from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtGui import QSurfaceFormat, QFont, QColor, QIcon, QPixmap, QPainter
+from PyQt5.QtSvg import QSvgRenderer
+from PyQt5.QtCore import Qt, QPoint, QSize
 from viewers.main_viewer import Viewer3D
 from viewers.nav_controls import SideNavBar
 from config.settings import APP_NAME, APP_COLOR_EXE, TOP_BT_NAV
+from menus.svg_icons import SVG_ICONS
 
 def load_stylesheet(filename):
     """Charge un fichier QSS et remplace les variables"""
@@ -16,47 +18,67 @@ def load_stylesheet(filename):
     stylesheet = stylesheet.replace('#204060', APP_COLOR_EXE)
     return stylesheet
 
+def create_app_icon(size=64): # Augmenté à 64 pour une meilleure qualité
+    """Crée l'icône de l'application à partir du SVG"""
+    renderer = QSvgRenderer(SVG_ICONS["favicon"].encode())
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    # Optionnel : améliorer le rendu
+    painter.setRenderHint(QPainter.Antialiasing)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap), pixmap
+
 class TitleBar(QWidget):
     """Barre de titre personnalisée avec boutons de contrôle"""
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
         self.setFixedHeight(32)
-        # Le style est maintenant chargé depuis le fichier externe
         self.setStyleSheet(load_stylesheet('stylesheets/menuBar-stylesheet.qss'))
         
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(5, 0, 0, 0) # Marge réduite à gauche
+        layout.setSpacing(0) # On gère l'espace manuellement
         
+        # --- BLOC ICÔNE ---
+        _, icon_pixmap = create_app_icon(64) 
+        self.icon_label = QLabel()
+        
+        # On redimensionne l'image à 18px (un peu plus petit que les 20px du label)
+        # Cela crée une "marge de sécurité" interne pour éviter la coupure
+        scaled_icon = icon_pixmap.scaled(18, 18, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        
+        self.icon_label.setPixmap(scaled_icon)
+        # Le label est légèrement plus grand (24px) que l'image (18px)
+        self.icon_label.setFixedSize(24, 32) 
+        self.icon_label.setAlignment(Qt.AlignCenter) # CENTRE l'icône dans ses 24px
+        
+        layout.addWidget(self.icon_label)
+        # ------------------
+
         # Titre de la fenêtre
+        layout.addSpacing(5) # Espace entre icône et texte
         self.title_label = QLabel(APP_NAME)
         self.title_label.setFont(QFont("Segoe UI", 10))
         layout.addWidget(self.title_label)
         
-        # Espace flexible
         layout.addStretch()
         
-        # Bouton minimiser
-        self.btn_minimize = QPushButton("─")
-        self.btn_minimize.setFixedSize(30, 32)
-        self.btn_minimize.clicked.connect(self.parent.showMinimized)
-        layout.addWidget(self.btn_minimize)
-        
-        # Bouton maximiser/restaurer
-        self.btn_maximize = QPushButton("□")
-        self.btn_maximize.setFixedSize(30, 32)
-        self.btn_maximize.clicked.connect(self.toggle_maximize)
-        layout.addWidget(self.btn_maximize)
-        
-        # Bouton fermer
-        self.btn_close = QPushButton("✕")
-        self.btn_close.setObjectName("close")
-        self.btn_close.setFixedSize(30, 32)
-        self.btn_close.clicked.connect(self.parent.close)
-        layout.addWidget(self.btn_close)
-        
-        # Variables pour le déplacement de la fenêtre
+        # Boutons de contrôle
+        for btn_text, func, name in [
+            ("─", self.parent.showMinimized, "min"),
+            ("□", self.toggle_maximize, "max"),
+            ("✕", self.parent.close, "close")
+        ]:
+            btn = QPushButton(btn_text)
+            btn.setFixedSize(45, 32) # Standard Windows size (plus large pour cliquer)
+            if name == "close": btn.setObjectName("close")
+            btn.clicked.connect(func)
+            if btn_text == "□": self.btn_maximize = btn
+            layout.addWidget(btn)
+
         self.drag_pos = None
         self.setMouseTracking(True)
     
@@ -125,6 +147,10 @@ class MainWindow(QMainWindow):
         
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
+        
+        # Définir l'icône de la fenêtre (pour la barre des tâches)
+        app_icon, _ = create_app_icon(64)
+        self.setWindowIcon(app_icon)
         
         # Variables pour le déplacement
         self.drag_start_pos = None

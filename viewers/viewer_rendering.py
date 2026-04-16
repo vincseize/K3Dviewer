@@ -7,7 +7,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from config.settings import *
 from .gizmo import Gizmo
-from .menu_bar import MenuBar
+# from .menu_bar import MenuBar
 
 class ViewerRendering:
     def _create_nav_cursor(self, type):

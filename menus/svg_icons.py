@@ -1,5 +1,10 @@
 # menus/svg_icons.py
 SVG_ICONS = {
+    "favicon": """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="none" stroke="white" stroke-width="4"/>  
+    <circle cx="50" cy="50" r="40" fill="none" stroke="white" stroke-width="4"/> 
+    <polygon points="50,10 15,70 85,70" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/>
+    </svg>""",
     "persp": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ddd" stroke-width="2"/></svg>""",
     
     "ortho": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3H21V21H3V3Z" stroke="#ddd" stroke-width="2"/><path d="M12 3V21M3 12H21" stroke="#ddd" stroke-opacity="0.3"/></svg>""",
@@ -15,4 +20,5 @@ SVG_ICONS = {
     "zoom": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="#ddd" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="#ddd" stroke-width="2"/><path d="M11 8V14M8 11H14" stroke="#ddd" stroke-width="2"/></svg>""",
     
     "pan": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2V22M12 2L8 6M12 2L16 6M12 22L8 18M12 22L16 18" stroke="#ddd" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="#ddd" stroke-width="2"/><path d="M5 12H2M22 12H19" stroke="#ddd" stroke-width="2"/></svg>"""
+
 }

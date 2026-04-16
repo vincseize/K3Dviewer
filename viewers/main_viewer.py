@@ -47,7 +47,7 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
         Gizmo.render(self.width(), self.height(), mv_matrix)
         cursor_pos = self.mapFromGlobal(QCursor.pos())
         # MenuBar.render(self.width(), self.height(), cursor_pos.x(), self.height() - cursor_pos.y())
-        glEnable(GL_DEPTH_TEST)
+        # glEnable(GL_DEPTH_TEST)
 
     def activate_zoom_mode(self, checked):
         self.zoom_mode = checked
