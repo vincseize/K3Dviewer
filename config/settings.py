@@ -2,7 +2,7 @@
 from datetime import datetime
 
 APP_NAME   = "K3D viewer"
-VERSION    = "0.5.0"
+VERSION    = "0.6.0"
 COPYRIGHT  = f"© 2025 - {datetime.now().year} - LRDS - All rights reserved."
 DEVELOPERS = "LRDS - Vincseize - Karlova - C. POTTIER"
 APP_COLOR_EXE   = "#204060"
