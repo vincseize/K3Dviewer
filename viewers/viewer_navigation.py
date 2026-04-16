@@ -1,5 +1,6 @@
 # viewers/viewer_navigation.py
 import numpy as np
+from config.settings import PAN_SPEED, ZOOM_SPEED, WHEEL_ZOOM_SPEED
 
 class ViewerNavigation:
     def setup_nav_states(self):
@@ -9,12 +10,12 @@ class ViewerNavigation:
         self.is_zooming = False
 
     def handle_wheel_zoom(self, delta_y):
-        self.zoom = np.clip(self.zoom + delta_y * 0.005, -30.0, -2.0)
+        self.zoom = np.clip(self.zoom + delta_y * WHEEL_ZOOM_SPEED, -30.0, -2.0)
 
     def compute_pan(self, dx, dy):
-        factor = abs(self.zoom) * 0.001
-        self.pan_x += dx * factor
-        self.pan_y -= dy * factor
+        # Utiliser la vitesse de pan depuis settings
+        self.pan_x += dx * PAN_SPEED
+        self.pan_y -= dy * PAN_SPEED
 
     def compute_rotation(self, dx, dy):
         self.rot_y += dx * 0.5

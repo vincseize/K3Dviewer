@@ -21,3 +21,8 @@ C_GREEN    = (0.55, 0.85, 0.1)  # Y
 C_BLUE     = (0.18, 0.52, 1.0)  # Z
 C_GRID     = (0.28, 0.28, 0.28, 0.6)
 C_BG       = (0.12, 0.12, 0.12, 1.0)
+
+# Vitesse de navigation
+PAN_SPEED = 0.002    # Vitesse du pan (défaut: 0.002)
+ZOOM_SPEED = 0.05    # Vitesse du zoom en mode drag (défaut: 0.05)
+WHEEL_ZOOM_SPEED = 0.005  # Vitesse de la molette

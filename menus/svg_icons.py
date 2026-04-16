@@ -19,6 +19,16 @@ SVG_ICONS = {
     
     "zoom": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="#ddd" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="#ddd" stroke-width="2"/><path d="M11 8V14M8 11H14" stroke="#ddd" stroke-width="2"/></svg>""",
     
-    "pan": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2V22M12 2L8 6M12 2L16 6M12 22L8 18M12 22L16 18" stroke="#ddd" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="#ddd" stroke-width="2"/><path d="M5 12H2M22 12H19" stroke="#ddd" stroke-width="2"/></svg>"""
-
+"pan": """<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="12" y1="8" x2="12" y2="16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <line x1="8" y1="12" x2="16" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    
+    <path d="M12 2L15 6H9L12 2Z" fill="white"/>
+    
+    <path d="M12 22L9 18H15L12 22Z" fill="white"/>
+    
+    <path d="M2 12L6 9V15L2 12Z" fill="white"/>
+    
+    <path d="M22 12L18 15V9L22 12Z" fill="white"/>
+</svg>"""
 }

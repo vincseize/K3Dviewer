@@ -11,7 +11,6 @@ from .viewer_core import ViewerCore
 from .viewer_navigation import ViewerNavigation
 from .viewer_rendering import ViewerRendering
 from .gizmo import Gizmo
-# from .menu_bar import MenuBar
 from menus.context_menu import MainContextMenu
 
 class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
@@ -45,23 +44,31 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
             self.draw_world_axes()
         glDisable(GL_DEPTH_TEST)
         Gizmo.render(self.width(), self.height(), mv_matrix)
-        cursor_pos = self.mapFromGlobal(QCursor.pos())
-        # MenuBar.render(self.width(), self.height(), cursor_pos.x(), self.height() - cursor_pos.y())
-        # glEnable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
 
     def activate_zoom_mode(self, checked):
         self.zoom_mode = checked
-        if checked: 
+        # Désactiver le pan quand on active le zoom
+        if checked:
+            self.pan_mode = False
+            self.is_panning = False
             self.setCursor(self.zoom_cursor)
-        else: 
+            print("Mode Zoom ACTIVÉ - Pan désactivé")
+        else:
             self.unsetCursor()
+            print("Mode Zoom DÉSACTIVÉ")
 
     def activate_pan_mode(self, checked):
         self.pan_mode = checked
-        if checked: 
+        # Désactiver le zoom quand on active le pan
+        if checked:
+            self.zoom_mode = False
+            self.is_zooming = False
             self.setCursor(self.pan_cursor)
-        else: 
+            print("Mode Pan ACTIVÉ - Zoom désactivé")
+        else:
             self.unsetCursor()
+            print("Mode Pan DÉSACTIVÉ")
 
     def _sync_navbar_ui(self):
         root = self.window()
@@ -75,14 +82,15 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
 
     def mousePressEvent(self, event):
         self.last_pos = event.pos()
-        # if MenuBar.handle_click(event.x(), self.height(), self.height()):
-        #     self.update()
-        #     return
         
+        # Mode Pan actif ET clic gauche (PAN)
         if self.pan_mode and event.button() == Qt.LeftButton: 
             self.is_panning = True
+            print("Pan drag démarré")
+        # Mode Zoom actif ET clic gauche (ZOOM)
         elif self.zoom_mode and event.button() == Qt.LeftButton: 
             self.is_zooming = True
+            print("Zoom drag démarré")
         elif event.button() == Qt.RightButton:
             self.context_menu.exec_(event.globalPos())
         elif event.button() == Qt.MidButton:
@@ -91,22 +99,30 @@ class Viewer3D(ViewerCore, ViewerNavigation, ViewerRendering):
 
     def mouseMoveEvent(self, event):
         diff = event.pos() - self.last_pos
-        if self.pan_mode and self.is_panning: 
+        
+        # PAN en mode drag
+        if self.pan_mode and self.is_panning:
             self.compute_pan(diff.x(), diff.y())
+            print(f"Pan: dx={diff.x()}, dy={diff.y()}")
+        # ZOOM en mode drag
         elif self.zoom_mode and self.is_zooming:
-            self.zoom = np.clip(self.zoom + diff.y() * 0.05, -30.0, -2.0)
+            from config.settings import ZOOM_SPEED
+            self.zoom = np.clip(self.zoom + diff.y() * ZOOM_SPEED, -30.0, -2.0)
             self.update_projection()
+            print(f"Zoom: {self.zoom}")
+        # Clic milieu : rotation ou pan avec Shift
         elif event.buttons() & Qt.MidButton:
             if QApplication.keyboardModifiers() & Qt.ShiftModifier:
                 self.compute_pan(diff.x(), diff.y())
             else:
                 self.compute_rotation(diff.x(), diff.y())
+        
         self.last_pos = event.pos()
         self.update()
 
     def mouseReleaseEvent(self, event):
-        self.is_panning = False
         self.is_zooming = False
+        self.is_panning = False
 
     def resizeGL(self, w, h):
         self.update_projection()
