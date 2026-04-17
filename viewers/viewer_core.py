@@ -1,12 +1,14 @@
 # viewers/viewer_core.py
 from PyQt5.QtWidgets import QOpenGLWidget
 from PyQt5.QtCore import Qt, QPoint
-from config.settings import *
+from config.settings import TOP_BT_NAV
+from utils.logger import debug_log
 
-TOP_BT_NAV = 50
+# TOP_BT_NAV = 50
 
 class ViewerCore(QOpenGLWidget):
     def __init__(self, parent=None):
+        
         super().__init__(parent)
         self.def_zoom = -12.0
         self.zoom = self.def_zoom
@@ -17,9 +19,11 @@ class ViewerCore(QOpenGLWidget):
         self.show_axes = True
         self.last_pos = QPoint()
         self.setFocusPolicy(Qt.StrongFocus)
+        self.debug = False
+        
 
     def set_projection(self, ortho_mode):
-        print(f"[DEBUG] set_projection reçu: {ortho_mode}")
+        debug_log("ViewerCore", f"set_projection reçu: {ortho_mode}", self.debug)
         self.is_ortho = ortho_mode
         self.makeCurrent()
         self.update_projection()

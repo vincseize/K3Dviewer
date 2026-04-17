@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QMenu, QAction, QWidget, QMenuBar
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
+from utils.logger import debug_log
 
 class MenuBarManager:
     """Gère la barre de menu de l'application"""
@@ -10,12 +11,19 @@ class MenuBarManager:
         self.parent = parent
         self.viewer = viewer
         self.menu_bar = None
+        self.debug = False
         
     def setup_menu_bar(self):
-        """Configure la barre de menu standard Qt"""
+        """Configure la barre de menu standard Qt avec Help à droite"""
         self.menu_bar = self.parent.menuBar()
+        # On applique le style QSS (important pour la cohérence visuelle)
+        from main import load_stylesheet
+        style = load_stylesheet('stylesheets/menuBar-stylesheet.qss')
+        self.menu_bar.setStyleSheet(style)
         
-        # File menu
+        # --- MENUS DE GAUCHE ---
+        
+        # Menu File
         fileMenu = QMenu("&File", self.parent)
         self.menu_bar.addMenu(fileMenu)
         
@@ -41,7 +49,7 @@ class MenuBarManager:
         self.exitAction.triggered.connect(self.parent.close)
         fileMenu.addAction(self.exitAction)
         
-        # Edit menu
+        # Menu Edit
         editMenu = QMenu("&Edit", self.parent)
         self.menu_bar.addMenu(editMenu)
         
@@ -60,25 +68,19 @@ class MenuBarManager:
         self.cutAction.triggered.connect(self._on_cut)
         editMenu.addAction(self.cutAction)
         
-        # View menu
+        # Menu View
         viewMenu = QMenu("&View", self.parent)
         self.menu_bar.addMenu(viewMenu)
         
         self.gridAction = QAction("Show Grid", self.parent, checkable=True)
         self.gridAction.setChecked(self.viewer.show_grid)
-        self.gridAction.triggered.connect(lambda: self.viewer.set_grid_visible(self.gridAction.isChecked()))
+        self.gridAction.triggered.connect(lambda checked: self.viewer.set_grid_visible(checked))
         viewMenu.addAction(self.gridAction)
         
         self.axesAction = QAction("Show Axes", self.parent, checkable=True)
         self.axesAction.setChecked(self.viewer.show_axes)
-        self.axesAction.triggered.connect(lambda: self.viewer.set_axes_visible(self.axesAction.isChecked()))
+        self.axesAction.triggered.connect(lambda checked: self.viewer.set_axes_visible(checked))
         viewMenu.addAction(self.axesAction)
-        
-        viewMenu.addSeparator()
-        
-        self.projectionAction = QAction("Toggle Perspective/Ortho", self.parent)
-        self.projectionAction.triggered.connect(lambda: self.viewer.set_projection(not self.viewer.is_ortho))
-        viewMenu.addAction(self.projectionAction)
         
         viewMenu.addSeparator()
         
@@ -86,15 +88,15 @@ class MenuBarManager:
         self.resetViewAction.setShortcut("Home")
         self.resetViewAction.triggered.connect(self.viewer.reset_view)
         viewMenu.addAction(self.resetViewAction)
+
+        # --- MENU DE DROITE (?) ---
         
-        # Ajouter un espaceur extensible avant le menu "?"
-        spacer = QWidget()
-        spacer.setSizePolicy(QWidget().sizePolicy().Expanding, QWidget().sizePolicy().Preferred)
-        self.menu_bar.setCornerWidget(spacer, Qt.TopRightCorner)
+        # On crée une mini barre de menu indépendante pour le coin droit
+        right_menu_widget = QMenuBar()
+        right_menu_widget.setStyleSheet(style) # On applique le même QSS
         
-        # Menu "?" à droite
         helpMenu = QMenu("&?", self.parent)
-        self.menu_bar.addMenu(helpMenu)
+        right_menu_widget.addMenu(helpMenu)
         
         self.aboutAction = QAction("&About", self.parent)
         self.aboutAction.triggered.connect(self._on_about)
@@ -104,39 +106,36 @@ class MenuBarManager:
         self.aboutQtAction.triggered.connect(self._on_about_qt)
         helpMenu.addAction(self.aboutQtAction)
         
+        # On injecte cette mini-barre dans le coin en haut à droite
+        self.menu_bar.setCornerWidget(right_menu_widget, Qt.TopRightCorner)
+        
         return self.menu_bar
     
     def _on_new(self):
-        """Nouveau fichier"""
-        print("New action triggered")
+        debug_log("MenuBar", "New action triggered")
         
     def _on_open(self):
-        """Ouvrir un fichier"""
-        print("Open action triggered")
+        debug_log("MenuBar", "Open action triggered")
         
     def _on_save(self):
-        """Sauvegarder"""
-        print("Save action triggered")
+        debug_log("MenuBar", "Save action triggered")
         
     def _on_copy(self):
-        """Copier"""
-        print("Copy action triggered")
+        debug_log("MenuBar", "Copy action triggered")
         
     def _on_paste(self):
-        """Coller"""
-        print("Paste action triggered")
+        debug_log("MenuBar", "Paste action triggered")
         
     def _on_cut(self):
-        """Couper"""
-        print("Cut action triggered")
+        debug_log("MenuBar", "Cut action triggered")
         
     def _on_about(self):
-        """À propos"""
+        debug_log("MenuBar", "About dialog opened")
         from PyQt5.QtWidgets import QMessageBox
-        from config.settings import APP_NAME
-        QMessageBox.about(self.parent, "About", f"{APP_NAME}\nVersion 1.0\n\n3D Viewer Application")
+        from config.settings import APP_NAME, VERSION
+        QMessageBox.about(self.parent, "About", f"{APP_NAME}\nVersion {VERSION}\n\n3D Viewer Application")
     
     def _on_about_qt(self):
-        """À propos de Qt"""
+        debug_log("MenuBar", "About Qt triggered")
         from PyQt5.QtWidgets import QApplication
         QApplication.aboutQt()

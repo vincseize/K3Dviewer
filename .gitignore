@@ -3,6 +3,8 @@
 /build/
 /dist/
 
+/TESTS/
+
 # Fichiers de configuration de build
 *.spec
 

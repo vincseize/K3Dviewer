@@ -1,8 +1,10 @@
 # config/settings.py
 from datetime import datetime
 
+PRINT_DEBUG = True  # Affiche les messages de debug dans la console
+
 APP_NAME   = "K3D viewer"
-VERSION    = "0.6.0"
+VERSION    = "0.6.5"
 COPYRIGHT  = f"© 2025 - {datetime.now().year} - LRDS - All rights reserved."
 DEVELOPERS = "LRDS - Vincseize - Karlova - C. POTTIER"
 APP_COLOR_EXE   = "#204060"
