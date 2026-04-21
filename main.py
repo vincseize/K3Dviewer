@@ -1,5 +1,5 @@
 # main.py
-import sys
+import sys, os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QWidget, QHBoxLayout, QPushButton, QLabel)
 from PyQt5.QtGui import QSurfaceFormat, QFont, QIcon, QPixmap, QPainter
@@ -11,15 +11,41 @@ from menus.menu_bar import MenuBarManager
 from config.settings import APP_NAME, APP_COLOR_EXE, TOP_BT_NAV
 from menus.svg_icons import SVG_ICONS
 
-def load_stylesheet(filename):
-    """Charge un fichier QSS et remplace les variables"""
-    with open(filename, 'r') as f:
-        stylesheet = f.read()
-    stylesheet = stylesheet.replace('#204060', APP_COLOR_EXE)
-    return stylesheet
+def get_resource_path(relative_path):
+    """ Récupère le chemin absolu vers la ressource, compatible PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+def apply_stylesheet(target_widget, relative_path):
+    """ Charge le fichier QSS et l'applique au widget cible """
+    qss_path = get_resource_path(relative_path)
+    try:
+        with open(qss_path, "r", encoding="utf-8") as f:
+            target_widget.setStyleSheet(f.read())
+    except FileNotFoundError:
+        print(f"Erreur : Impossible de trouver le style à {qss_path}")
+
+def get_app_icon():
+    """Charge l'icône de l'application depuis le fichier ICO"""
+    ico_path = get_resource_path('resources/favicon.ico')
+    if os.path.exists(ico_path):
+        return QIcon(ico_path)
+    else:
+        # Fallback : créer à partir du SVG
+        renderer = QSvgRenderer(SVG_ICONS["favicon"].encode())
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        renderer.render(painter)
+        painter.end()
+        return QIcon(pixmap)
 
 def create_app_icon(size=64):
-    """Crée l'icône de l'application à partir du SVG"""
+    """Crée l'icône de l'application à partir du SVG (fallback)"""
     renderer = QSvgRenderer(SVG_ICONS["favicon"].encode())
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.transparent)
@@ -35,17 +61,19 @@ class TitleBar(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.setFixedHeight(32)
-        self.setStyleSheet(load_stylesheet('stylesheets/menuBar-stylesheet.qss'))
+        
+        apply_stylesheet(self, 'stylesheets/menuBar-stylesheet.qss')
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Icône
-        _, icon_pixmap = create_app_icon(64)
+        # Icône - utiliser la même que la fenêtre
+        app_icon = get_app_icon()
         self.icon_label = QLabel()
-        scaled_icon = icon_pixmap.scaled(18, 18, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.icon_label.setPixmap(scaled_icon)
+        # Récupérer le pixmap de l'icône et le redimensionner
+        icon_pixmap = app_icon.pixmap(18, 18)
+        self.icon_label.setPixmap(icon_pixmap)
         self.icon_label.setFixedSize(24, 32)
         self.icon_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.icon_label)
@@ -128,6 +156,8 @@ class MainWindow(QMainWindow):
         self.menu_manager = MenuBarManager(self, self.viewer)
         menu_bar = self.menu_manager.setup_menu_bar()
         menu_bar.setFixedHeight(28)
+        apply_stylesheet(menu_bar, 'stylesheets/menuBar-stylesheet.qss')
+        
         central_layout.addWidget(menu_bar)
         
         # Viewer
@@ -141,15 +171,15 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
         
-        # Icône de la fenêtre
-        app_icon, _ = create_app_icon(64)
-        self.setWindowIcon(app_icon)
+        # Icône de la fenêtre (chargée depuis favicon.ico)
+        self.setWindowIcon(get_app_icon())
         
         self.drag_start_pos = None
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.nav_bar.setGeometry(self.width() - 45, 60 + TOP_BT_NAV, 40, 270)
+        if hasattr(self, 'nav_bar'):
+            self.nav_bar.setGeometry(self.width() - 45, 60 + TOP_BT_NAV, 40, 270)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

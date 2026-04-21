@@ -25,6 +25,22 @@ C_GRID     = (0.28, 0.28, 0.28, 0.6)
 C_BG       = (0.12, 0.12, 0.12, 1.0)
 
 # Vitesse de navigation
-PAN_SPEED = 0.002    # Vitesse du pan (défaut: 0.002)
-ZOOM_SPEED = 0.05    # Vitesse du zoom en mode drag (défaut: 0.05)
+PAN_SPEED = 0.008    # Vitesse du pan 
+ZOOM_SPEED = 0.05    # Vitesse du zoom en mode drag
 WHEEL_ZOOM_SPEED = 0.005  # Vitesse de la molette
+
+# GRIDS AXES
+GRID_SIZE = 10.0
+GRID_SPACING = 0.2  # Espacement des lignes (0.2 = 50 lignes de chaque côté)
+GRID_MAJOR_EVERY = 5  # Une ligne majeure toutes les 5 lignes
+GRID_VISIBLE = True
+GRID_COLOR_MINOR = (0.28, 0.28, 0.28, 0.15)  # Couleur lignes secondaires (RGBA)
+GRID_COLOR_MAJOR = (0.28, 0.28, 0.28, 0.4)   # Couleur lignes principales (RGBA)
+GRID_LINE_WIDTH_MINOR = 1.0
+GRID_LINE_WIDTH_MAJOR = 1.5
+
+# AXES
+AXE_X_VISIBLE = True
+AXE_Y_VISIBLE = False
+AXE_Z_VISIBLE = True
+AXE_LINE_WIDTH = 2.5

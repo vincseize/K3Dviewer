@@ -24,3 +24,5 @@ pip install pyrr
 ## 📁 Compilation
 python -v  --> 3.7
 pyinstaller --noconfirm --onefile --windowed --name "K3Dviewer" main.py
+pyinstaller --noconfirm --onefile --windowed --name "K3Dviewer" --add-data "stylesheets/menuBar-stylesheet.qss;stylesheets" main.py
+pyinstaller --noconfirm --onefile --windowed --name "K3Dviewer" --icon="ressources/favicon.ico" --add-data "stylesheets/menuBar-stylesheet.qss;stylesheets" --add-data "ressources/favicon.ico;ressources" main.py

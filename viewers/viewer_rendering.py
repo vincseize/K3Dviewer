@@ -5,21 +5,29 @@ from PyQt5.QtCore import Qt, QPoint
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from config.settings import *
+
+# Import des constantes de configuration
+from config.settings import (
+    GRID_SIZE, GRID_SPACING, GRID_MAJOR_EVERY,
+    GRID_COLOR_MINOR, GRID_COLOR_MAJOR,
+    GRID_LINE_WIDTH_MINOR, GRID_LINE_WIDTH_MAJOR,
+    AXE_X_VISIBLE, AXE_Y_VISIBLE, AXE_Z_VISIBLE,
+    AXE_LINE_WIDTH,
+    C_RED, C_GREEN, C_BLUE
+)
 from .gizmo import Gizmo
 from utils.logger import debug_log
 
-class ViewerRendering: # Mixin de rendu pour le Viewer3D, fille de ViewerCore? MainViewer?
+class ViewerRendering:
     """
     Mixin de rendu pour le Viewer3D.
-    Note : Cette classe n'a pas d'__init__ car elle est mixée dans Viewer3D.
-    Elle utilise l'attribut 'self.debug' défini dans la classe parente.
+    Cette classe gère les fonctions de dessin OpenGL et la projection.
     """
 
     def _create_nav_cursor(self, type):
-        # On récupère le debug de la classe parente, sinon False par défaut
+        """Crée un curseur personnalisé pour le zoom ou le pan"""
         is_debug = getattr(self, 'debug', False)
-        debug_log("Rendering", f"Creating navigation cursor: {type}", is_debug)
+        debug_log("Rendering", f"Création du curseur : {type}", is_debug)
         
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.transparent)
@@ -31,15 +39,19 @@ class ViewerRendering: # Mixin de rendu pour le Viewer3D, fille de ViewerCore? M
         p.setPen(QPen(QColor(255, 255, 255), 2))
         
         if type == "zoom":
+            # Icône Loupe / Zoom
             p.drawLine(16, 8, 16, 24)
-            p.drawPolyline(QPoint(12,12), QPoint(16,8), QPoint(20,12))
+            p.drawPolyline(QPoint(12, 12), QPoint(16, 8), QPoint(20, 12))
         else:
+            # Icône Main / Pan (Croix)
             p.drawLine(8, 16, 24, 16)
             p.drawLine(16, 8, 16, 24)
+            
         p.end()
         return QCursor(pixmap, 16, 16)
 
     def update_projection(self):
+        """Met à jour la matrice de projection (Perspective ou Ortho)"""
         is_debug = getattr(self, 'debug', False)
         w, h = max(1, self.width()), max(1, self.height())
         
@@ -49,60 +61,102 @@ class ViewerRendering: # Mixin de rendu pour le Viewer3D, fille de ViewerCore? M
         aspect = w / h
 
         if self.is_ortho:
+            # Calcul de l'échelle ortho basé sur le zoom
             scale = abs(self.zoom) * 0.4
             glOrtho(-scale * aspect, scale * aspect, -scale, scale, 0.1, 1000.0)
-            debug_log("Rendering", f"Projection: ORTHO (Scale: {scale:.2f})", is_debug)
+            debug_log("Rendering", f"Projection: ORTHO (Echelle: {scale:.2f})", is_debug)
         else:
+            # Perspective standard
             gluPerspective(45, aspect, 0.1, 1000.0)
             debug_log("Rendering", f"Projection: PERSP (Zoom: {self.zoom:.2f})", is_debug)
             
         glMatrixMode(GL_MODELVIEW)
 
     def draw_grid(self):
-        size = 10
-        glLineWidth(1.0)
-        glColor4f(0.28, 0.28, 0.28, 0.15)
+        """Dessine une grille au sol basée sur GRID_SIZE et GRID_SPACING"""
+        size = GRID_SIZE
+        step = GRID_SPACING
+        
+        # Calcul du nombre de lignes
+        num_lines = int(size / step)
+        
+        # 1. Lignes secondaires (fines)
+        glLineWidth(GRID_LINE_WIDTH_MINOR)
+        glColor4f(*GRID_COLOR_MINOR)
         glBegin(GL_LINES)
-        for i in range(-50, 51):
-            if i % 5 == 0: continue
-            v = i * 0.2
-            glVertex3f(-size, 0, v); glVertex3f(size, 0, v)
-            glVertex3f(v, 0, -size); glVertex3f(v, 0, size)
+        
+        for i in range(-num_lines, num_lines + 1):
+            v = i * step
+            # Ignorer les lignes majeures (elles seront dessinées après)
+            if GRID_MAJOR_EVERY > 0 and i % GRID_MAJOR_EVERY == 0 and i != 0:
+                continue
+            
+            glVertex3f(-size, 0, v)
+            glVertex3f(size, 0, v)
+            glVertex3f(v, 0, -size)
+            glVertex3f(v, 0, size)
         glEnd()
         
-        glLineWidth(1.5)
-        glColor4f(0.28, 0.28, 0.28, 0.4)
-        glBegin(GL_LINES)
-        for i in range(-10, 11):
-            if i == 0: continue
-            v = i
-            glVertex3f(-size, 0, v); glVertex3f(size, 0, v)
-            glVertex3f(v, 0, -size); glVertex3f(v, 0, size)
-        glEnd()
+        # 2. Lignes majeures (plus épaisses)
+        if GRID_MAJOR_EVERY > 0:
+            glLineWidth(GRID_LINE_WIDTH_MAJOR)
+            glColor4f(*GRID_COLOR_MAJOR)
+            glBegin(GL_LINES)
+            
+            for i in range(-num_lines, num_lines + 1):
+                if i == 0:
+                    continue
+                if i % GRID_MAJOR_EVERY == 0:
+                    v = i * step
+                    glVertex3f(-size, 0, v)
+                    glVertex3f(size, 0, v)
+                    glVertex3f(v, 0, -size)
+                    glVertex3f(v, 0, size)
+            glEnd()
 
     def draw_world_axes(self):
-        glLineWidth(2.5)
+        """Dessine les axes XYZ selon la configuration de visibilité"""
+        glLineWidth(AXE_LINE_WIDTH)
+        # Légère décalage de profondeur pour éviter le clignotement avec la grille
         glDepthRange(0.0, 0.999)
         glBegin(GL_LINES)
-        glColor3f(*C_RED); glVertex3f(-10, 0, 0); glVertex3f(10, 0, 0)
-        glColor3f(*C_GREEN); glVertex3f(0, -10, 0); glVertex3f(0, 10, 0)
-        glColor3f(*C_BLUE); glVertex3f(0, 0, -10); glVertex3f(0, 0, 10)
+        
+        # Axe X (Rouge)
+        if AXE_X_VISIBLE:
+            glColor3f(*C_RED)
+            glVertex3f(-GRID_SIZE, 0, 0)
+            glVertex3f(GRID_SIZE, 0, 0)
+            
+        # Axe Y (Vert)
+        if AXE_Y_VISIBLE:
+            glColor3f(*C_GREEN)
+            glVertex3f(0, -GRID_SIZE, 0)
+            glVertex3f(0, GRID_SIZE, 0)
+            
+        # Axe Z (Bleu)
+        if AXE_Z_VISIBLE:
+            glColor3f(*C_BLUE)
+            glVertex3f(0, 0, -GRID_SIZE)
+            glVertex3f(0, 0, GRID_SIZE)
+            
         glEnd()
         glDepthRange(0.0, 1.0)
 
     def draw_cube_centered(self):
+        """Dessine un cube de test au centre du monde"""
         glLineWidth(2.0)
-        s = 1.0
+        s = 1.0  # Taille
         v = [
             [-s, -s, -s], [s, -s, -s], [s, s, -s], [-s, s, -s],
             [-s, -s, s], [s, -s, s], [s, s, s], [-s, s, s]
         ]
         e = [
-            (0,1), (1,2), (2,3), (3,0), (4,5), (5,6), 
-            (6,7), (7,4), (0,4), (1,5), (2,6), (3,7)
+            (0,1), (1,2), (2,3), (3,0), # Face arrière
+            (4,5), (5,6), (6,7), (7,4), # Face avant
+            (0,4), (1,5), (2,6), (3,7)  # Liaisons
         ]
         glBegin(GL_LINES)
-        glColor3f(0.8, 0.8, 0.8)
+        glColor3f(0.8, 0.8, 0.8) # Gris clair
         for edge in e:
             for vertex in edge:
                 glVertex3fv(v[vertex])
